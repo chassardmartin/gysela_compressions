@@ -53,11 +53,6 @@ if __name__ == "__main__":
         lambda x: x.compute() 
     )
 
-    psnr_result = process.compute() 
-    analysis = GYSELAmostunstableDiagAnalysis(diag_dir, zfp_compressors) 
-    analysis.add_metric("psnr", psnr_result)
-    analysis.results_to_json() 
+    result = process.compute() 
 
-    print(psnr_result) 
-
-
+    

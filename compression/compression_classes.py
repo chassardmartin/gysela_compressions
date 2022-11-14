@@ -7,6 +7,63 @@ import os
 from .tthresh import tthresh_call_compression, tthresh_call_decompression
 
 
+class wavelet_percent_deflateCompressor:
+
+    def __init__(self, origin_dir, target_dir, wavelet, rate):
+        
+        self.files = os.listdir(origin_dir) 
+        self.files.sort() 
+        self.origin_dir = origin_dir 
+        self.target_dir = target_dir 
+        self.wavelet = wavelet 
+        self.rate = rate
+        self.parameter = "_" + self.wavelet.name + "_" + str(self.rate * 100) + "%"
+        self.__name__ = "wave_percent_deflate" + self.parameter 
+
+    def compute(self, key_name):
+
+        rec_dir = key_name + "_" + self.__name__ 
+        self.reconstruction_path = os.path.join(self.target_dir, rec_dir)
+
+        if not os.path.isdir(self.reconstruction_path):
+            os.mkdir(self.reconstruction_path)
+        self.reconstruction_path += "/" 
+        
+        self.compression_time = [] 
+        self.compression_rate = [] 
+        self.decompression_time = [] 
+
+        for _file in self.files:
+            # In case it was already compressed 
+            if not os.path.exists(self.reconstruction_path + _file):
+
+                data = h5_to_array(self.origin_dir + _file, key_name) 
+                t_flag = time() 
+                comp, array, slices = wavelet_nDcompression(data, self.wavelet, self.rate)
+                self.compression_time.append(time()-t_flag)
+                self.compression_rate.append(byte_size(data) / byte_size(comp))
+                t_flag = time() 
+                reconstruction = wavelet_nDdecompression(comp, array, slices, self.wavelet) 
+                self.decompression_time.append(time()-t_flag) 
+                array_to_h5(reconstruction,
+                            self.reconstruction_path + _file,
+                            key_name)
+        json_path = self.reconstruction_path + "comp_results.json"
+
+        if not os.path.exists(json_path):
+            # Saving compression results as json in the reconstruction dir 
+            df = pd.DataFrame(
+                {
+                    "compression_rate" : self.compression_rate,
+                    "compression_time" : self.compression_time,
+                    "decompression_time" : self.decompression_time,
+                }
+            )
+            df.to_json(json_path)
+
+        return self.reconstruction_path 
+
+
 class zfpCompressor:
 
     def __init__(self, origin_dir, target_dir, bpd):
@@ -16,7 +73,8 @@ class zfpCompressor:
         self.origin_dir = origin_dir 
         self.target_dir = target_dir 
         self.bpd = bpd
-        self.__parameter__ = "_bpd_" + str(bpd) 
+        self.parameter = "_bpd_" + str(bpd)
+        self.__name__ = "zfp" + self.parameter 
 
     def compute(self, key_name):
 
@@ -71,6 +129,8 @@ class ezwCompressor:
         self.target_dir = target_dir 
         self.wavelet = wavelet 
         self.n_passes = n_passes 
+        self.parameter = "_n-passes_" + str(n_passes)
+        self.__name__ = "ezw" + self.parameter
     
     def compute(self, key_name):
 
@@ -130,6 +190,8 @@ class tthreshCompressor:
         self.target_dir = target_dir 
         self.target = target 
         self.target_value = target_value 
+        self.parameter = "_" + target + "_" + str(target_value)
+        self.__name__ = "tthresh" + self.parameter
     
     def compute(self, key_name):
 

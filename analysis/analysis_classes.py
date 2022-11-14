@@ -1,6 +1,5 @@
 import pandas as pd 
 
-
 class IdentityDiagAnalysis:
 
     def __init__(self, diag_dir, compressor_list):
@@ -15,9 +14,8 @@ class IdentityDiagAnalysis:
     def add_metric(self, metric_name, quality_list):
 
         for compressor, value in zip(self.compressor_list, quality_list):
-            
-            compressor_name = type(compressor).__name__ + compressor.__parameter__ 
-            self.results["compression_method"].append(compressor_name)
+
+            self.results["compression_method"].append(compressor.__name__)
             self.results["metric_used"].append(metric_name) 
             self.results["quality_value"].append(value) 
         
@@ -42,8 +40,7 @@ class FourierDiagAnalysis:
 
         for compressor, value in zip(self.compressor_list, quality_list):
             
-            compressor_name = type(compressor).__name__ + compressor.__parameter__ 
-            self.results["compression_method"].append(compressor_name)
+            self.results["compression_method"].append(compressor.__name__)
             self.results["metric_used"].append(metric_name) 
             self.results["quality_value"].append(value) 
     
@@ -67,9 +64,8 @@ class GYSELAmostunstableDiagAnalysis:
     def add_metric(self, metric_name, quality_list):
 
         for compressor, value in zip(self.compressor_list, quality_list):
-            
-            compressor_name = type(compressor).__name__ + compressor.__parameter__ 
-            self.results["compression_method"].append(compressor_name)
+
+            self.results["compression_method"].append(compressor.__name__)
             self.results["metric_used"].append(metric_name) 
             self.results["quality_value"].append(value) 
     
