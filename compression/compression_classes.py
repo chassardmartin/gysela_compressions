@@ -16,6 +16,7 @@ class zfpCompressor:
         self.origin_dir = origin_dir 
         self.target_dir = target_dir 
         self.bpd = bpd
+        self.__parameter__ = "_bpd_" + str(bpd) 
 
     def compute(self, key_name):
 

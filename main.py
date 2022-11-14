@@ -10,12 +10,13 @@ __date__ = "08/2022"
 import pywt
 from time import time
 import dask.bag as db
+from analysis.analysis_classes import GYSELAmostunstableDiagAnalysis
 
 ### My own imports
 from compression.compression_classes import ezwCompressor, tthreshCompressor, zfpCompressor
 from diags.diag_classes import FourierDiag, GYSELAmostunstableDiag, IdentityDiag
 from imports.metric_classes import psnrMetric, hsnrMetric 
-
+from imports.general_tools import save_post_diag_qualities  
 
 
 if __name__ == "__main__":
@@ -23,6 +24,7 @@ if __name__ == "__main__":
 
     h5_dir = "/local/home/mc271598/Bureau/data/phi_2D_peter/Phi2D_0_5/"
     rec_dir = "/local/home/mc271598/Bureau/data/phi_2D_peter/Phi2D_0_5_rec/"
+    diag_dir = rec_dir + "diags/" 
 
     init_state_dir = "/local/home/mc271598/Bureau/data/phi_2D_peter/init_state/"  
 
@@ -51,7 +53,11 @@ if __name__ == "__main__":
         lambda x: x.compute() 
     )
 
-    result = process.compute() 
-    print(result) 
+    psnr_result = process.compute() 
+    analysis = GYSELAmostunstableDiagAnalysis(diag_dir, zfp_compressors) 
+    analysis.add_metric("psnr", psnr_result)
+    analysis.results_to_json() 
+
+    print(psnr_result) 
 
 
