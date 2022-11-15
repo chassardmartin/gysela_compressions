@@ -2,7 +2,6 @@
 We extend the EZW implementation by Anmol Parande to n dimensions. 
 """
 
-
 __author__ = "Anmol Parande on github.com/aparande/EZWImageCompression"
 
 
@@ -11,7 +10,7 @@ import numpy as np
 import pywt
 from bitarray import bitarray
 from .utils import bytestuff
-from imports.math_tools import byte_size, interpret_as_float64, interpret_as_int64
+from imports.math_tools import byte_size
 
 PREFIX_FREE_CODE = {
     "T": bitarray("0"),

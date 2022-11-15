@@ -4,13 +4,13 @@ described in J.M. Shapiro's 1993 paper
 Inspired by Anmol Parande : github.com/aparande/EZWCompression
 """
 
-from re import S
-from imports.math_tools import byte_size
-import numpy as np
-import pywt
-from bitarray import bitarray
-from sklearn.datasets import get_data_home
-from .ezw_utils import *
+# from re import S
+# from imports.math_tools import byte_size
+# import numpy as np
+# import pywt
+# from bitarray import bitarray
+# from sklearn.datasets import get_data_home
+# from .ezw_utils import *
 
 
 class CoefficientQuadTree:

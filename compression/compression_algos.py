@@ -5,10 +5,12 @@ __date__ = "08/2022"
 from compression import nD_ezw
 import numpy as np
 import pywt
-import dippykit.coding as dipc
+
+# import dippykit.coding as dipc
 import scipy.sparse as spar
 import zlib
-import fpzip
+
+# import fpzip
 import pandas as pd
 import pyzfp
 

@@ -2,9 +2,11 @@ __author__ = "Anmol Parande on github.com/aparande/EZWImageCompression"
 
 
 import numpy as np
-from PIL import Image
+
+# from PIL import Image
 import numpy as np
-from os import stat
+
+# from os import stat
 from bitarray import bitarray
 
 SOI_MARKER = bytes.fromhex("FFD8")

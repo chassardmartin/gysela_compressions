@@ -1,5 +1,6 @@
 import h5py
-import dask.array as da
+
+# import dask.array as da
 
 
 def h5_to_array(path, h5_key):

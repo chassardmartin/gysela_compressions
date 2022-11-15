@@ -274,10 +274,6 @@ class tthreshCompressor:
 
         comp_results = self.files.map(lambda _f: compression(_f)).compute()
 
-        self.compression_time = []
-        self.compression_rate = []
-        self.decompression_time = []
-
         json_path = self.reconstruction_path + "comp_results.json"
 
         if not os.path.exists(json_path):
