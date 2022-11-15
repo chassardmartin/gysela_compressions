@@ -1,5 +1,6 @@
 import os 
 import numpy as np 
+import dask.bag as db 
 from compression.H5_conversions import h5_to_array
 from scipy.fft import fftn
 import imports.HDF5utils as H5ut 
@@ -29,11 +30,19 @@ class IdentityDiag:
         self.origin_tensor = []
         self.rec_tensor = []
 
-        for origin_file, rec_file in zip(self.origin_files, self.rec_files):
+        def build(origin_file, rec_file):
             origin_data = h5_to_array(self.origin_dir + origin_file, key_name)
             rec_data = h5_to_array(self.reconstructions_dir + rec_file, key_name)
-            self.origin_tensor.append(origin_data) 
-            self.rec_tensor.append(rec_data)
+            return origin_data, rec_data
+        
+        files = db.from_sequence(zip(self.origin_files, self.rec_files)) 
+        tensors = files.map(
+            lambda x: build(x[0], x[1])
+        ).compute() 
+
+        for origin_data, rec_data in tensors:
+            self.origin_tensor.append(origin_data)
+            self.rec_tensor.append(rec_data) 
 
         self.origin_tensor = np.array(self.origin_tensor) 
         self.rec_tensor = np.array(self.rec_tensor) 
@@ -63,12 +72,19 @@ class FourierDiag:
         self.origin_tensor = []
         self.rec_tensor = []
 
-        for origin_file, rec_file in zip(self.origin_files, self.rec_files):
-
+        def build(origin_file, rec_file):
             origin_data = h5_to_array(self.origin_dir + origin_file, key_name)
             rec_data = h5_to_array(self.reconstructions_dir + rec_file, key_name)
-            self.origin_tensor.append(np.abs(fftn(origin_data))) 
-            self.rec_tensor.append(np.abs(fftn(rec_data)))
+            return origin_data, rec_data
+        
+        files = db.from_sequence(zip(self.origin_files, self.rec_files)) 
+        tensors = files.map(
+            lambda x: build(x[0], x[1])
+        ).compute() 
+
+        for origin_data, rec_data in tensors:
+            self.origin_tensor.append(origin_data)
+            self.rec_tensor.append(rec_data) 
 
         self.origin_tensor = np.array(self.origin_tensor) 
         self.rec_tensor = np.array(self.rec_tensor) 
