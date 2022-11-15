@@ -50,7 +50,6 @@ class IdentityDiag:
         return self.origin_tensor, self.rec_tensor 
 
 
-
 class FourierDiag:
 
     def __init__(self, origin_dir, reconstructions_dir):
@@ -75,7 +74,7 @@ class FourierDiag:
         def build(origin_file, rec_file):
             origin_data = h5_to_array(self.origin_dir + origin_file, key_name)
             rec_data = h5_to_array(self.reconstructions_dir + rec_file, key_name)
-            return origin_data, rec_data
+            return np.abs(fftn(origin_data)), np.abs(fftn(rec_data)) 
         
         files = db.from_sequence(zip(self.origin_files, self.rec_files)) 
         tensors = files.map(

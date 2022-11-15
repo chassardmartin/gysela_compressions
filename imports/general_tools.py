@@ -159,9 +159,12 @@ def save_post_diag_qualities(compressor_list, quality_list, metric_used, execute
     Saves the given results in a json file in json_dir directory 
     """
     d = {} 
+    d["compression_method"] = [] 
+    d["quality_value"] = [] 
 
     for compressor, value in zip(compressor_list, quality_list): 
-        d[type(compressor).__name__ + compressor.__parameter__] = [value] 
+        d["compression_method"].append(compressor.__name__)
+        d["quality_value"].append(value)
 
     df = pd.DataFrame(d)
     file_name = executed_diag + "_" + metric_used  

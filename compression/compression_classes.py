@@ -11,7 +11,13 @@ import dask.bag as db
 
 class wavelet_percent_deflateCompressor:
     def __init__(self, origin_dir, target_dir, wavelet, rate):
-
+        """
+        Initialize the compressor from an origin_directory which .h5 files will be 
+        compressed and reconstructed. 
+            - wavelet : wavelet required for compression
+            - rate : rate of biggest kept coefficients in wavelet decomposition 
+                    (the remaining ones are set to zero)
+        """
         self.files = os.listdir(origin_dir)
         self.files.sort()
         # Dask bags ?
@@ -24,7 +30,11 @@ class wavelet_percent_deflateCompressor:
         self.__name__ = "wave_percent_deflate" + self.parameter
 
     def compute(self, key_name):
-
+        """
+        Computes the compression of dataset "key_name"
+        returns the path where reconstructions are built
+        The files are handled in parallel with dask.bag structure
+        """
         rec_dir = key_name + "_" + self.__name__
         self.reconstruction_path = os.path.join(self.target_dir, rec_dir)
 
@@ -57,7 +67,7 @@ class wavelet_percent_deflateCompressor:
             # if not os.path.exists(json_path):
 
             self.compression_time = []
-            self.compression_rate = 64 / self.bpd
+            self.compression_rate = []
             self.decompression_time = []
 
             for comp_time, comp_rate, decomp_time in comp_results:
@@ -82,7 +92,12 @@ class wavelet_percent_deflateCompressor:
 
 class zfpCompressor:
     def __init__(self, origin_dir, target_dir, bpd):
-
+        """
+        Initialize the compressor from an origin_directory which .h5 files will be 
+        compressed and reconstructed. 
+            - bpd : bits per digit for the compressed data 
+            example : 4 -> compression rate = 16 (data in double precision) 
+        """
         self.files = os.listdir(origin_dir)
         self.files.sort()
         # Dask bags ?
@@ -94,7 +109,11 @@ class zfpCompressor:
         self.__name__ = "zfp" + self.parameter
 
     def compute(self, key_name):
-
+        """
+        Computes the compression of dataset "key_name" 
+        returns the path where reconstructions are built.
+        The files are handled in parallel with dask.bag structure
+        """
         rec_dir = key_name + "_" + self.__name__
         self.reconstruction_path = os.path.join(self.target_dir, rec_dir)
 
@@ -146,7 +165,13 @@ class zfpCompressor:
 
 class ezwCompressor:
     def __init__(self, origin_dir, target_dir, wavelet, n_passes):
-
+        """
+        Initialize the compressor from an origin_directory which .h5 files will be 
+        compressed and reconstructed. 
+            - wavelet : the required wavelet for compressions 
+            - n_passes : number of passes in the EZW algorithm
+            example : pywt.Wavelet('bior4.4'), 25 
+        """
         self.files = os.listdir(origin_dir)
         self.files.sort()
         self.files = db.from_sequence(self.files)
@@ -158,7 +183,11 @@ class ezwCompressor:
         self.__name__ = "ezw" + self.parameter
 
     def compute(self, key_name):
-
+        """
+        Computes the compression of dataset "key_name" 
+        returns the path where reconstructions are built.
+        The files are handled in parallel with dask.bag structure
+        """
         rec_dir = key_name + "_" + self.__name__
         self.reconstruction_path = os.path.join(self.target_dir, rec_dir)
 
@@ -193,11 +222,12 @@ class ezwCompressor:
             # if not os.path.exists(json_path):
 
             self.compression_time = []
-            self.compression_rate = 64 / self.bpd
+            self.compression_rate = []
             self.decompression_time = []
 
-            for comp_time, decomp_time in comp_results:
+            for comp_time, comp_rate, decomp_time in comp_results:
                 self.compression_time.append(comp_time)
+                self.compression_rate.append(comp_rate) 
                 self.decompression_time.append(decomp_time)
 
             # Saving compression results as json in the reconstruction dir
@@ -217,7 +247,13 @@ class ezwCompressor:
 
 class tthreshCompressor:
     def __init__(self, origin_dir, target_dir, target, target_value):
-
+        """
+        Initialize the compressor from an origin_directory which .h5 files will be 
+        compressed and reconstructed. 
+            - target : metric target for tthresh compressor call 
+            - target_value : the associated vlaue 
+            example : "psnr", 60 
+        """
         self.files = os.listdir(origin_dir)
         self.files.sort()
         self.files = db.from_sequence(self.files)
@@ -229,7 +265,11 @@ class tthreshCompressor:
         self.__name__ = "tthresh" + self.parameter
 
     def compute(self, key_name):
-
+        """
+        Computes the compression of dataset "key_name" 
+        returns the path where reconstructions are built.
+        The files are handled in parallel with dask.bag structure
+        """
         rec_dir = key_name + "_" + self.__name__
         self.reconstruction_path = os.path.join(self.target_dir, rec_dir)
 
@@ -278,11 +318,12 @@ class tthreshCompressor:
             # if not os.path.exists(json_path):
 
             self.compression_time = []
-            self.compression_rate = 64 / self.bpd
+            self.compression_rate = []
             self.decompression_time = []
 
-            for comp_time, decomp_time in comp_results:
+            for comp_time, comp_rate, decomp_time in comp_results:
                 self.compression_time.append(comp_time)
+                self.compression_rate.append(comp_rate)
                 self.decompression_time.append(decomp_time)
 
             # Saving compression results as json in the reconstruction dir
