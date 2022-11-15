@@ -1,217 +1,247 @@
-from .compression_algos import * 
+from bz2 import compress
+from .compression_algos import *
 from .H5_conversions import array_to_h5, h5_to_array
 from imports.math_tools import byte_size
 import tempfile
-import re  
-import os 
+import re
+import os
 from .tthresh import tthresh_call_compression, tthresh_call_decompression
+import dask.bag as db
 
 
 class wavelet_percent_deflateCompressor:
-
     def __init__(self, origin_dir, target_dir, wavelet, rate):
-        
-        self.files = os.listdir(origin_dir) 
-        self.files.sort() 
-        self.origin_dir = origin_dir 
-        self.target_dir = target_dir 
-        self.wavelet = wavelet 
+
+        self.files = os.listdir(origin_dir)
+        self.files.sort()
+        # Dask bags ?
+        self.files = db.from_sequence(self.files)
+        self.origin_dir = origin_dir
+        self.target_dir = target_dir
+        self.wavelet = wavelet
         self.rate = rate
         self.parameter = "_" + self.wavelet.name + "_" + str(self.rate * 100) + "%"
-        self.__name__ = "wave_percent_deflate" + self.parameter 
+        self.__name__ = "wave_percent_deflate" + self.parameter
 
     def compute(self, key_name):
 
-        rec_dir = key_name + "_" + self.__name__ 
+        rec_dir = key_name + "_" + self.__name__
         self.reconstruction_path = os.path.join(self.target_dir, rec_dir)
 
         if not os.path.isdir(self.reconstruction_path):
             os.mkdir(self.reconstruction_path)
-        self.reconstruction_path += "/" 
-        
-        self.compression_time = [] 
-        self.compression_rate = [] 
-        self.decompression_time = [] 
+        self.reconstruction_path += "/"
 
-        for _file in self.files:
-            # In case it was already compressed 
-            if not os.path.exists(self.reconstruction_path + _file):
-
-                data = h5_to_array(self.origin_dir + _file, key_name) 
-                t_flag = time() 
-                comp, array, slices = wavelet_nDcompression(data, self.wavelet, self.rate)
-                self.compression_time.append(time()-t_flag)
-                self.compression_rate.append(byte_size(data) / byte_size(comp))
-                t_flag = time() 
-                reconstruction = wavelet_nDdecompression(comp, array, slices, self.wavelet) 
-                self.decompression_time.append(time()-t_flag) 
-                array_to_h5(reconstruction,
-                            self.reconstruction_path + _file,
-                            key_name)
-        json_path = self.reconstruction_path + "comp_results.json"
-
-        if not os.path.exists(json_path):
-            # Saving compression results as json in the reconstruction dir 
-            df = pd.DataFrame(
-                {
-                    "compression_rate" : self.compression_rate,
-                    "compression_time" : self.compression_time,
-                    "decompression_time" : self.decompression_time,
-                }
-            )
-            df.to_json(json_path)
-
-        return self.reconstruction_path 
-
-
-class zfpCompressor:
-
-    def __init__(self, origin_dir, target_dir, bpd):
-        
-        self.files = os.listdir(origin_dir) 
-        self.files.sort() 
-        self.origin_dir = origin_dir 
-        self.target_dir = target_dir 
-        self.bpd = bpd
-        self.parameter = "_bpd_" + str(bpd)
-        self.__name__ = "zfp" + self.parameter 
-
-    def compute(self, key_name):
-
-        rec_dir = key_name + "_zfp_bpd_" + str(self.bpd)  
-        self.reconstruction_path = os.path.join(self.target_dir, rec_dir)
-
-        if not os.path.isdir(self.reconstruction_path):
-            os.mkdir(self.reconstruction_path)
-        self.reconstruction_path += "/" 
-        
-        self.compression_time = [] 
-        self.compression_rate = 64 / self.bpd 
-        self.decompression_time = [] 
-
-        for _file in self.files:
-            # In case it was already compressed 
-            if not os.path.exists(self.reconstruction_path + _file):
-
-                data = h5_to_array(self.origin_dir + _file, key_name) 
-                t_flag = time() 
-                comp = zfp_compression(data, self.bpd) 
-                self.compression_time.append(time()-t_flag)
-                t_flag = time() 
-                reconstruction = zfp_decompression(data, comp, self.bpd) 
-                self.decompression_time.append(time()-t_flag) 
-                array_to_h5(reconstruction,
-                            self.reconstruction_path + _file,
-                            key_name)
-        json_path = self.reconstruction_path + "comp_results.json"
-
-        if not os.path.exists(json_path):
-            # Saving compression results as json in the reconstruction dir 
-            df = pd.DataFrame(
-                {
-                    "compression_rate" : self.compression_rate,
-                    "compression_time" : self.compression_time,
-                    "decompression_time" : self.decompression_time,
-                }
-            )
-            df.to_json(json_path)
-
-        return self.reconstruction_path 
-
-
-class ezwCompressor:
-
-    def __init__(self, origin_dir, target_dir, wavelet, n_passes):
-        
-        self.files = os.listdir(origin_dir)
-        self.files.sort() 
-        self.origin_dir = origin_dir
-        self.target_dir = target_dir 
-        self.wavelet = wavelet 
-        self.n_passes = n_passes 
-        self.parameter = "_n-passes_" + str(n_passes)
-        self.__name__ = "ezw" + self.parameter
-    
-    def compute(self, key_name):
-
-        rec_dir = key_name + "_ezw_n-passes_" + str(self.n_passes) + "_" + self.wavelet.name 
-        self.reconstruction_path = os.path.join(self.target_dir, rec_dir)
-
-        if not os.path.isdir(self.reconstruction_path):
-            os.mkdir(self.reconstruction_path)
-        self.reconstruction_path += "/" 
-
-        self.compression_time = [] 
-        self.compression_rate = [] 
-        self.decompression_time = []
-
-        for _file in self.files: 
-
+        def compression(_file):
+            # In case it was already compressed
             if not os.path.exists(self.reconstruction_path + _file):
 
                 data = h5_to_array(self.origin_dir + _file, key_name)
-                data_size = byte_size(data) 
+                t_flag = time()
+                comp, array, slices = wavelet_nDcompression(
+                    data, self.wavelet, self.rate
+                )
+                comp_time = time() - t_flag
+                comp_rate = byte_size(data) / byte_size(comp)
+                t_flag = time()
+                reconstruction = wavelet_nDdecompression(
+                    comp, array, slices, self.wavelet
+                )
+                decomp_time = time() - t_flag
+                array_to_h5(reconstruction, self.reconstruction_path + _file, key_name)
+                return comp_time, comp_rate, decomp_time
+
+        comp_results = self.files.map(lambda _f: compression(_f)).compute()
+
+        json_path = self.reconstruction_path + "comp_results.json"
+
+        if not os.path.exists(json_path):
+
+            self.compression_time = []
+            self.compression_rate = []
+            self.decompression_time = []
+
+            for comp_time, comp_rate, decomp_time in comp_results:
+                self.compression_time.append(comp_time)
+                self.compression_rate.append(comp_rate)
+                self.decompression_time.append(decomp_time)
+
+                # Saving compression results as json in the reconstruction dir
+                df = pd.DataFrame(
+                    {
+                        "compression_rate": self.compression_rate,
+                        "compression_time": self.compression_time,
+                        "decompression_time": self.decompression_time,
+                    }
+                )
+                df.to_json(json_path)
+
+        return self.reconstruction_path
+
+
+class zfpCompressor:
+    def __init__(self, origin_dir, target_dir, bpd):
+
+        self.files = os.listdir(origin_dir)
+        self.files.sort()
+        # Dask bags ?
+        self.files = db.from_sequence(self.files)
+        self.origin_dir = origin_dir
+        self.target_dir = target_dir
+        self.bpd = bpd
+        self.parameter = "_bpd_" + str(bpd)
+        self.__name__ = "zfp" + self.parameter
+
+    def compute(self, key_name):
+
+        rec_dir = key_name + "_" + self.__name__
+        self.reconstruction_path = os.path.join(self.target_dir, rec_dir)
+
+        if not os.path.isdir(self.reconstruction_path):
+            os.mkdir(self.reconstruction_path)
+        self.reconstruction_path += "/"
+
+        def compression(_file):
+            # In case it was already compressed
+            if not os.path.exists(self.reconstruction_path + _file):
+
+                data = h5_to_array(self.origin_dir + _file, key_name)
+                t_flag = time()
+                comp = zfp_compression(data, self.bpd)
+                comp_time = time() - t_flag
+                t_flag = time()
+                reconstruction = zfp_decompression(data, comp, self.bpd)
+                decomp_time = time() - t_flag
+                array_to_h5(reconstruction, self.reconstruction_path + _file, key_name)
+                return comp_time, decomp_time
+
+        comp_results = self.files.map(lambda _f: compression(_f)).compute()
+
+        json_path = self.reconstruction_path + "comp_results.json"
+
+        if not os.path.exists(json_path):
+
+            self.compression_time = []
+            self.compression_rate = 64 / self.bpd
+            self.decompression_time = []
+
+            for comp_time, decomp_time in comp_results:
+                self.compression_time.append(comp_time)
+                self.decompression_time.append(decomp_time)
+
+            # Saving compression results as json in the reconstruction dir
+            df = pd.DataFrame(
+                {
+                    "compression_rate": self.compression_rate,
+                    "compression_time": self.compression_time,
+                    "decompression_time": self.decompression_time,
+                }
+            )
+            df.to_json(json_path)
+
+        return self.reconstruction_path
+
+
+class ezwCompressor:
+    def __init__(self, origin_dir, target_dir, wavelet, n_passes):
+
+        self.files = os.listdir(origin_dir)
+        self.files.sort()
+        self.files = db.from_sequence(self.files)
+        self.origin_dir = origin_dir
+        self.target_dir = target_dir
+        self.wavelet = wavelet
+        self.n_passes = n_passes
+        self.parameter = "_n-passes_" + str(n_passes) + "_" + self.wavelet.name
+        self.__name__ = "ezw" + self.parameter
+
+    def compute(self, key_name):
+
+        rec_dir = key_name + "_" + self.__name__
+        self.reconstruction_path = os.path.join(self.target_dir, rec_dir)
+
+        if not os.path.isdir(self.reconstruction_path):
+            os.mkdir(self.reconstruction_path)
+        self.reconstruction_path += "/"
+
+        def compression(_file):
+
+            if not os.path.exists(self.reconstruction_path + _file):
+
+                print(_file)
+                data = h5_to_array(self.origin_dir + _file, key_name)
+                data_size = byte_size(data)
                 ezw_renorm = 1 / np.min(np.abs(data[np.nonzero(data)]))
-                t_flag = time() 
+                t_flag = time()
                 encoder = nD_ezw.ZeroTreeEncoder(ezw_renorm * data, self.wavelet)
                 encoder.process_coding_passes(self.n_passes)
-                self.compression_time.append(time() - t_flag)
-                self.compression_rate.append(data_size / len(encoder))
+                print(time() - t_flag)
+                comp_time = time() - t_flag
+                comp_rate = data_size / len(encoder)
                 t_flag = time()
                 decoder = nD_ezw.ZeroTreeDecoder(data.shape, self.wavelet, encoder)
                 decoder.process_decoding_passes(self.n_passes)
                 reconstruction = decoder.getReconstruction() / ezw_renorm
-                self.decompression_time.append(time() - t_flag)
-                array_to_h5(reconstruction, self.reconstruction_path + _file, key_name) 
-        
+                decomp_time = time() - t_flag
+                array_to_h5(reconstruction, self.reconstruction_path + _file, key_name)
+                return comp_time, comp_rate, decomp_time
+
+        comp_results = self.files.map(lambda _f: compression(_f)).compute()
+
         json_path = self.reconstruction_path + "comp_results.json"
 
         if not os.path.exists(json_path):
-            # Saving compression results as json in the reconstruction dir 
-            df = pd.DataFrame(
-                {
-                    "compression_rate" : self.compression_rate,
-                    "compression_time" : self.compression_time,
-                    "decompression_time" : self.decompression_time,
-                }
-            )
-            df.to_json(json_path)
-        
+
+            self.compression_time = []
+            self.compression_rate = []
+            self.decompression_time = []
+
+            for comp_time, comp_rate, decomp_time in comp_results:
+                self.compression_time.append(comp_time)
+                self.compression_rate.append(comp_rate)
+                self.decompression_time.append(decomp_time)
+
+                # Saving compression results as json in the reconstruction dir
+                df = pd.DataFrame(
+                    {
+                        "compression_rate": self.compression_rate,
+                        "compression_time": self.compression_time,
+                        "decompression_time": self.decompression_time,
+                    }
+                )
+                df.to_json(json_path)
+
         return self.reconstruction_path
-        
+
 
 class tthreshCompressor:
-
     def __init__(self, origin_dir, target_dir, target, target_value):
-        
+
         self.files = os.listdir(origin_dir)
-        self.files.sort() 
+        self.files.sort()
+        self.files = db.from_sequence(self.files)
         self.origin_dir = origin_dir
-        self.target_dir = target_dir 
-        self.target = target 
-        self.target_value = target_value 
+        self.target_dir = target_dir
+        self.target = target
+        self.target_value = target_value
         self.parameter = "_" + target + "_" + str(target_value)
         self.__name__ = "tthresh" + self.parameter
-    
+
     def compute(self, key_name):
 
-        rec_dir = key_name + "_tthresh_" + self.target + "_" + str(self.target_value)  
+        rec_dir = key_name + "_" + self.__name__
         self.reconstruction_path = os.path.join(self.target_dir, rec_dir)
 
         if not os.path.isdir(self.reconstruction_path):
             os.mkdir(self.reconstruction_path)
-        self.reconstruction_path += "/" 
+        self.reconstruction_path += "/"
 
-        self.compression_time = [] 
-        self.compression_rate = [] 
-        self.decompression_time = []
-
-        for _file in self.files:
+        def compression(_file):
 
             if not os.path.exists(self.reconstruction_path + _file):
 
                 data = h5_to_array(self.origin_dir + _file, key_name)
-                data_name = _file[:-3] + "_" + key_name 
+                data_name = _file[:-3] + "_" + key_name
 
                 with tempfile.TemporaryDirectory() as raw_dir:
 
@@ -225,41 +255,50 @@ class tthreshCompressor:
                         target=self.target,
                         target_value=self.target_value,
                     )
-                    self.compression_time.append(time() - t_flag)
+                    comp_time = time() - t_flag
                     # Using regular expressions to extract compression ratio
                     comp_rate = re.search(r"compressionratio = \d+.\d+", comp_results)
                     comp_rate_value = re.search(r"\d+.\d+", comp_rate.group())
-                    self.compression_rate.append(float(comp_rate_value.group()))
+                    _comp_rate = float(comp_rate_value.group())
                     t_flag = time()
                     tthresh_call_decompression(raw_dir, data_name + "_comp.raw")
                     decomp_raw_file = raw_dir + data_name + "_decomp.raw"
                     reconstruction = np.fromfile(
                         decomp_raw_file, dtype=data.dtype
                     ).reshape(data.shape)
-                    self.decompression_time.append(time() - t_flag)
-                    array_to_h5(reconstruction, self.reconstruction_path + _file, key_name) 
+                    decomp_time = time() - t_flag
+                    array_to_h5(
+                        reconstruction, self.reconstruction_path + _file, key_name
+                    )
+                    return comp_time, _comp_rate, decomp_time
+
+        comp_results = self.files.map(lambda _f: compression(_f)).compute()
+
+        self.compression_time = []
+        self.compression_rate = []
+        self.decompression_time = []
 
         json_path = self.reconstruction_path + "comp_results.json"
 
         if not os.path.exists(json_path):
-            # Saving compression results as json in the reconstruction dir 
-            df = pd.DataFrame(
-                {
-                    "compression_rate" : self.compression_rate,
-                    "compression_time" : self.compression_time,
-                    "decompression_time" : self.decompression_time,
-                }
-            )
-            df.to_json(json_path)
-        
+
+            self.compression_time = []
+            self.compression_rate = []
+            self.decompression_time = []
+
+            for comp_time, comp_rate, decomp_time in comp_results:
+                self.compression_time.append(comp_time)
+                self.compression_rate.append(comp_rate)
+                self.decompression_time.append(decomp_time)
+
+                # Saving compression results as json in the reconstruction dir
+                df = pd.DataFrame(
+                    {
+                        "compression_rate": self.compression_rate,
+                        "compression_time": self.compression_time,
+                        "decompression_time": self.decompression_time,
+                    }
+                )
+                df.to_json(json_path)
+
         return self.reconstruction_path
-
-
-
-
-            
-
-
-            
-
-

@@ -188,7 +188,7 @@ class ZeroTreeEncoder:
     def dominant_pass(self):
         sec = []
         q = []
-        
+
         for parent in self.trees:
             parent.zero_code(self.thresh)
             q.append(parent)
