@@ -1,12 +1,22 @@
-from bz2 import compress
-from .compression_algos import *
-from .H5_conversions import array_to_h5, h5_to_array
-from imports.math_tools import byte_size
+from time import time 
+import pandas as pd 
+import numpy as np 
 import tempfile
 import re
 import os
-from .tthresh import tthresh_call_compression, tthresh_call_decompression
 import dask.bag as db
+
+from .tthresh import tthresh_call_compression, tthresh_call_decompression
+from .compression_algos import (
+    wavelet_nDcompression,
+    wavelet_nDdecompression,
+    zfp_compression,
+    zfp_decompression,
+)
+from .nD_ezw import ZeroTreeEncoder, ZeroTreeDecoder
+from .H5_conversions import array_to_h5, h5_to_array
+from imports.math_tools import byte_size
+
 
 
 class wavelet_percent_deflateCompressor:
@@ -203,13 +213,13 @@ class ezwCompressor:
                 data_size = byte_size(data)
                 ezw_renorm = 1 / np.min(np.abs(data[np.nonzero(data)]))
                 t_flag = time()
-                encoder = nD_ezw.ZeroTreeEncoder(ezw_renorm * data, self.wavelet)
+                encoder = ZeroTreeEncoder(ezw_renorm * data, self.wavelet)
                 encoder.process_coding_passes(self.n_passes)
                 print(time() - t_flag)
                 comp_time = time() - t_flag
                 comp_rate = data_size / len(encoder)
                 t_flag = time()
-                decoder = nD_ezw.ZeroTreeDecoder(data.shape, self.wavelet, encoder)
+                decoder = ZeroTreeDecoder(data.shape, self.wavelet, encoder)
                 decoder.process_decoding_passes(self.n_passes)
                 reconstruction = decoder.getReconstruction() / ezw_renorm
                 decomp_time = time() - t_flag
@@ -251,7 +261,7 @@ class tthreshCompressor:
         Initialize the compressor from an origin_directory which .h5 files will be 
         compressed and reconstructed. 
             - target : metric target for tthresh compressor call 
-            - target_value : the associated vlaue 
+            - target_value : the associated value 
             example : "psnr", 60 
         """
         self.files = os.listdir(origin_dir)
