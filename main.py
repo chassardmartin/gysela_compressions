@@ -1,5 +1,5 @@
 """
-Main file of gysela_compressions project
+Main file of gysela_compression project
 """
 
 __author__ = "Martin Chassard"
@@ -10,59 +10,65 @@ __date__ = "08/2022"
 import pywt
 from time import time
 import dask.bag as db
-from analysis.analysis_classes import GYSELAmostunstableDiagAnalysis, IdentityDiagAnalysis
 
 ### My own imports
 from compression.compression_classes import (
+    wavelet_percent_deflateCompressor,
     ezwCompressor,
     tthreshCompressor,
     zfpCompressor,
 )
-from diags.diag_classes import FourierDiag, GYSELAmostunstableDiag, IdentityDiag
-from imports.metric_classes import psnrMetric, hsnrMetric
-# from imports.general_tools import save_post_diag_qualities
-
 
 if __name__ == "__main__":
     print("imports successful")
 
-    h5_dir = "/local/home/mc271598/Bureau/data/phi_2D_peter/Phi2D_0_5/"
-    rec_dir = "/local/home/mc271598/Bureau/data/phi_2D_peter/Phi2D_0_5_rec/"
+    h5_dir = "/gpfs/workdir/chassardm/virginie_data/Phi2D_1/"
+    rec_dir = "/gpfs/workdir/chassardm/virginie_data/rec_Phi2D_1/"
     diag_dir = rec_dir + "diags/"
 
-    init_state_dir = "/local/home/mc271598/Bureau/data/phi_2D_peter/init_state/"
+    init_state_dir = "/gpfs/workdir/chassardm/virginie_data/init_state/"
 
     parameters = {
+        "wave_percent_deflate" : [0.03, 0.05, 0.1, 0.2, 0.4],
+        "ezw": [20, 25, 30, 35],
         "zfp": [2, 4, 8, 16],
         "tthresh": [("psnr", 40), ("psnr", 60), ("psnr", 80), ("psnr", 100)],
-        "ezw": [25, 30],
+        
     }
 
     wavelet = pywt.Wavelet("bior4.4")
 
+    wave_percent_deflate_compressors = [wavelet_percent_deflateCompressor(h5_dir, rec_dir, wavelet, r) for r in parameters["wave_percent_deflate"]]
+    ezw_compressors = [ezwCompressor(h5_dir, rec_dir, wavelet, n) for n in parameters["ezw"]]
     zfp_compressors = [zfpCompressor(h5_dir, rec_dir, bpd) for bpd in parameters["zfp"]]
     tthresh_compressors = [tthreshCompressor(h5_dir, rec_dir, t[0], t[1]) for t in parameters["tthresh"]]
-    # ezw_compressors = [ezwCompressor(h5_dir, rec_dir, wavelet, n) for n in parameters["ezw"]]
 
-    # compressor_bag = db.from_sequence(zfp_compressors)
+    compressors = wave_percent_deflate_compressors + ezw_compressors + zfp_compressors + tthresh_compressors
+    
+    # compressor_bag = db.from_sequence(compressors) 
+    
+    t_flag = time()
 
-    # comp = ezwCompressor(h5_dir, rec_dir, wavelet, n_passes=35)
-    # comp.compute("Phirth")
+    phirth_recs = []
+    phithphi_recs = []
 
-    ##### Compression + Diag results #### 
+    # Serial on this part, but files are dealt with in parallel 
+    # Shouldn't try having different levels of parallelism 
+    for compressor in compressors:
+        phirth_recs.append(compressor.compute("Phirth")) 
+        phithphi_recs.append(compressors.compute("Phithphi"))  
 
-    results = [] 
+    ### Executes compressions once for this slice see for diags after. 
 
-    for compressor in tthresh_compressors:
-        rec_path = compressor.compute("Phirth")
-        fourier_diag = IdentityDiag(h5_dir, rec_path)
-        origin, rec = fourier_diag.compute("Phirth")
-        metric = psnrMetric(origin, rec) 
-        results.append(metric.compute())  
 
-    analysis = IdentityDiagAnalysis(diag_dir, tthresh_compressors) 
-    analysis.add_metric("psnr", results) 
-    analysis.results_to_json() 
+    # Phirth_compressions = compressor_bag.map(
+    #     lambda x: x.compute("Phirth") 
+    # ) # Gives the reconstructions paths 
+    # Phithphi_compressions = compressor_bag.map(
+    #     lambda x: x.compute("Phithphi") 
+    # ) # Gives the reconstructions paths 
 
-    #######################################
-        
+    # Phirth_rec_paths = Phirth_compressions.compute() 
+    # Phithphi_rec_paths = Phithphi_compressions.compute() 
+
+    print(time() - t_flag)
