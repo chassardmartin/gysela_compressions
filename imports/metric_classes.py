@@ -61,5 +61,5 @@ class hsnrMetric:
                 _slice += (slice(None),) * (T - 1)
                 x = self.tensor1[_slice]
                 y = self.tensor2[_slice]
-                res.append(hsnr(self.parameter, x, y))
+                res.append(hsnr(x, y, self.parameter))
             return res

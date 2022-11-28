@@ -278,7 +278,7 @@ def psnr(x, y):
     return 20 * np.log10(np.max(x) - np.min(x)) - 20 * np.log10(2 * rmse(x, y))
 
 
-def hybridsnr_error(x, y, p):
+def hybridsnr_error(p, x, y):
     """
     An hybrid error that suppresses the pathologies of pointwise_relative 
     Input : x,y two np.ndarray or dask.array.core.Array objects 
@@ -299,11 +299,11 @@ def hybridsnr_error(x, y, p):
     return ((m ** 2).mean()) ** 0.5
 
 
-def hsnr(x, y, p):
+def hsnr(p, x, y):
     """
     Computes the hybrid-snr
     """
-    return -20 * np.log10(hybridsnr_error(x, y, p))
+    return -20 * np.log10(hybridsnr_error(p, x, y))
 
 
 def global_L2_rel_error(x, y):
