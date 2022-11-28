@@ -6,7 +6,7 @@ class psnrMetric:
 
         self.tensor1 = tensor1
         self.tensor2 = tensor2
-        self.__name__ = "psnr" 
+        self.__name__ = "psnr"
 
     def compute(self, time_series=False):
         """
@@ -39,7 +39,7 @@ class hsnrMetric:
         self.parameter = p
         self.tensor1 = tensor1
         self.tensor2 = tensor2
-        self.__name__ = "hsnr" + "_" + str(p) 
+        self.__name__ = "hsnr" + "_" + str(p)
 
     def compute(self, time_series=False):
         """
