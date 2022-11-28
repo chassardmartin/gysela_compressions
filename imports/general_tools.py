@@ -1,7 +1,8 @@
 import itertools
 import math
 import numpy as np
-import pandas as pd 
+import pandas as pd
+
 # from compression.compression_classes imp
 
 
@@ -151,27 +152,21 @@ def compressing_blockviews(block_view, kept_percent):
 
 # def save_post_diag_qualities(compressor_list, quality_list, metric_used, executed_diag, json_dir):
 #     """
-#     input : - compressor_list : a list of compressors objects as found in 
-#             compression.compression_classes 
-#             - quality_list : a list of post-diag metric results 
-#             - metric_used : a string being the name of the metric used for quality_list values  
-#             - executed_diag : a stirng of the executed diag for the results 
-#     Saves the given results in a json file in json_dir directory 
+#     input : - compressor_list : a list of compressors objects as found in
+#             compression.compression_classes
+#             - quality_list : a list of post-diag metric results
+#             - metric_used : a string being the name of the metric used for quality_list values
+#             - executed_diag : a stirng of the executed diag for the results
+#     Saves the given results in a json file in json_dir directory
 #     """
-#     d = {} 
-#     d["compression_method"] = [] 
-#     d["quality_value"] = [] 
+#     d = {}
+#     d["compression_method"] = []
+#     d["quality_value"] = []
 
-#     for compressor, value in zip(compressor_list, quality_list): 
+#     for compressor, value in zip(compressor_list, quality_list):
 #         d["compression_method"].append(compressor.__name__)
 #         d["quality_value"].append(value)
 
 #     df = pd.DataFrame(d)
-#     file_name = executed_diag + "_" + metric_used  
+#     file_name = executed_diag + "_" + metric_used
 #     df.to_json(json_dir + file_name + ".json")
-
-
-
-
-    
-

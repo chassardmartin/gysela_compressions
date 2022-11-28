@@ -1,57 +1,60 @@
-from .math_tools import psnr, hsnr 
+from .math_tools import psnr, hsnr
 
 
 class psnrMetric:
-
     def __init__(self, tensor1, tensor2):
 
-        self.tensor1 = tensor1 
-        self.tensor2 = tensor2 
+        self.tensor1 = tensor1
+        self.tensor2 = tensor2
 
-    def compute(self, dimensions=None):
+    def compute(self, time_series=False):
         """
-        input : - dimensions is a tuple of int/Nonetype to choose dimensions to
-                    project tensors on
-        example : dimensions = (None, 8 , None) -> x = x[:,8,:] 
+        computes the error in that metric
+        -time_series : bool, True -> we consider the whole tensor 
+                                as the data
+                             Otherwise, the errors are computed time_wise
         """
-        if dimensions is None:
-            _slice = (slice(None),) * len(self.tensor1.shape) 
+        if time_series:
+            x = self.tensor1
+            y = self.tensor2
+            return psnr(x, y)
         else:
-            _slice = () 
-            for keep in dimensions:
-                if keep is None:
-                    _slice += (slice(None),) 
-                else:
-                    _slice += (slice(keep, keep+1),)
-
-        x = self.tensor1[_slice] 
-        y = self.tensor2[_slice]
-        return psnr(x, y) 
+            res = []
+            T = self.tensor1.shape[0]
+            for t in self.range(T):
+                _slice = (slice(t, t + 1),)
+                _slice += (slice(None),) * (T - 1)
+                x = self.tensor1[_slice]
+                y = self.tensor2[_slice]
+                res.append(psnr(x, y))
+            return res
 
 
 class hsnrMetric:
-
     def __init__(self, p, tensor1, tensor2):
 
-        self.parameter = p 
-        self.tensor1 = tensor1 
-        self.tensor2 = tensor2 
+        self.parameter = p
+        self.tensor1 = tensor1
+        self.tensor2 = tensor2
 
-    def compute(self, dimensions=None):
+    def compute(self, time_series=False):
         """
-        input : - dimensions is a tuple of int/Nonetype to choose dimensions to
-                    project tensors on
-        example : dimensions = (None, 8 , None) -> x = x[:,8,:] 
+        computes the error in that metric
+        -time_series : bool, True -> we consider the whole tensor 
+                                as the data
+                             Otherwise, the errors are computed time_wise
         """
-        if dimensions is None:
-            _slice = (slice(None),) * len(self.tensor1.shape) 
+        if time_series:
+            x = self.tensor1
+            y = self.tensor2
+            return hsnr(self.parameter, x, y)
         else:
-            _slice = () 
-            for keep in dimensions:
-                if keep is None:
-                    _slice += (slice(None),) 
-                else:
-                    _slice += (slice(keep, keep+1),)
-        x = self.tensor1[_slice] 
-        y = self.tensor2[_slice] 
-        return hsnr(x, y, self.parameter)
+            res = []
+            T = self.tensor1.shape[0]
+            for t in self.range(T):
+                _slice = (slice(t, t + 1),)
+                _slice += (slice(None),) * (T - 1)
+                x = self.tensor1[_slice]
+                y = self.tensor2[_slice]
+                res.append(hsnr(self.parameter, x, y))
+            return res

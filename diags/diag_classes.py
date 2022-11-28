@@ -1,31 +1,50 @@
-import os 
-import numpy as np 
-import dask.bag as db 
+import os
+import numpy as np
+import dask.bag as db
+import dask.array as da
 from compression.H5_conversions import h5_to_array
 from scipy.fft import fftn
-import imports.HDF5utils as H5ut 
+import imports.HDF5utils as H5ut
 from imports.diag_utils import fourier_diag_to_tensor
-import glob 
+import glob
 from .GYSELA_diag import GetPhi2Dmostunstable
 
 
 class IdentityDiag:
+    """
+    Computes the "identity" diag chich means doing nothing, 
+        but assembling data contained in origin and reconstructions dir 
+        as two individual (np or dask.array) tensors.
+    """
 
     def __init__(self, origin_dir, reconstructions_dir):
+        """ 
+        - origin_dir : where initial .h5 data is contained
+        - rec_dir : where post-compression reconstructions are contained
+        """
 
-        self.origin_dir = origin_dir 
+        self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
         self.origin_files = os.listdir(self.origin_dir)
-        self.origin_files.sort() 
+        self.origin_files.sort()
         # Since we also generate .json files in compressions
         self.rec_files = list(
-            filter(
-                lambda s: s[-3:] == ".h5", os.listdir(self.reconstructions_dir)
-            )
+            filter(lambda s: s[-3:] == ".h5", os.listdir(self.reconstructions_dir))
         )
-        self.rec_files.sort() 
+        self.rec_files.sort()
 
-    def compute(self, key_name):
+    def compute(self, key_name, dask_arrays=False):
+        """
+        computes the diag
+        - key_name : key for .h5 data extraction
+        - dask_arrays : bool, True -> tensors are considered as dask arrays
+                                        np.ndarrays otherwise 
+        """
+
+        key_length = len(key_name)
+        # The reconstruction directories are built such that their name
+        # is key_name + "_" + compression_method_name
+        self.applied_method = self.reconstructions_dir[key_length + 1 :]
 
         self.origin_tensor = []
         self.rec_tensor = []
@@ -34,39 +53,58 @@ class IdentityDiag:
             origin_data = h5_to_array(self.origin_dir + origin_file, key_name)
             rec_data = h5_to_array(self.reconstructions_dir + rec_file, key_name)
             return origin_data, rec_data
-        
-        files = db.from_sequence(zip(self.origin_files, self.rec_files)) 
-        tensors = files.map(
-            lambda x: build(x[0], x[1])
-        ).compute() 
+
+        files = db.from_sequence(zip(self.origin_files, self.rec_files))
+        tensors = files.map(lambda x: build(x[0], x[1])).compute()
 
         for origin_data, rec_data in tensors:
             self.origin_tensor.append(origin_data)
-            self.rec_tensor.append(rec_data) 
+            self.rec_tensor.append(rec_data)
 
-        self.origin_tensor = np.array(self.origin_tensor) 
-        self.rec_tensor = np.array(self.rec_tensor) 
+        self.origin_tensor = np.array(self.origin_tensor)
+        self.rec_tensor = np.array(self.rec_tensor)
 
-        return self.origin_tensor, self.rec_tensor 
+        if dask_arrays:
+            self.origin_tensor = da.from_array(self.origin_tensor)
+            self.rec_tensor = da.from_array(self.rec_tensor)
+
+        return self.origin_tensor, self.rec_tensor
 
 
 class FourierDiag:
+    """
+    Computes the two - original and reconstructed as either np or dask arrays -
+                tensors and their fourier transform as a diag 
+    """
 
     def __init__(self, origin_dir, reconstructions_dir):
+        """ 
+        - origin_dir : where initial .h5 data is contained
+        - rec_dir : where post-compresison reconstructions are contained
+        """
 
-        self.origin_dir = origin_dir 
+        self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
-        self.origin_files = os.listdir(self.origin_dir) 
-        self.origin_files.sort() 
+        self.origin_files = os.listdir(self.origin_dir)
+        self.origin_files.sort()
         # Since we also generate .json files in compressions
         self.rec_files = list(
-            filter(
-                lambda s: s[-3:] == ".h5", os.listdir(self.reconstructions_dir)
-            )
+            filter(lambda s: s[-3:] == ".h5", os.listdir(self.reconstructions_dir))
         )
-        self.rec_files.sort() 
-    
-    def compute(self, key_name): 
+        self.rec_files.sort()
+
+    def compute(self, key_name, dask_arrays=False):
+        """
+        computes the diag
+        - key_name : key for .h5 data extraction
+        - dask_arrays : bool, True -> tensors are considered as dask arrays
+                                        np.ndarrays otherwise 
+        """
+
+        key_length = len(key_name)
+        # The reconstruction directories are built such that their name
+        # is key_name + "_" + compression_method_name
+        self.applied_method = self.reconstructions_dir[key_length + 1 :]
 
         self.origin_tensor = []
         self.rec_tensor = []
@@ -74,40 +112,53 @@ class FourierDiag:
         def build(origin_file, rec_file):
             origin_data = h5_to_array(self.origin_dir + origin_file, key_name)
             rec_data = h5_to_array(self.reconstructions_dir + rec_file, key_name)
-            return np.abs(fftn(origin_data)), np.abs(fftn(rec_data)) 
-        
-        files = db.from_sequence(zip(self.origin_files, self.rec_files)) 
-        tensors = files.map(
-            lambda x: build(x[0], x[1])
-        ).compute() 
+            return np.abs(fftn(origin_data)), np.abs(fftn(rec_data))
+
+        files = db.from_sequence(zip(self.origin_files, self.rec_files))
+        tensors = files.map(lambda x: build(x[0], x[1])).compute()
 
         for origin_data, rec_data in tensors:
             self.origin_tensor.append(origin_data)
-            self.rec_tensor.append(rec_data) 
+            self.rec_tensor.append(rec_data)
 
-        self.origin_tensor = np.array(self.origin_tensor) 
-        self.rec_tensor = np.array(self.rec_tensor) 
+        self.origin_tensor = np.array(self.origin_tensor)
+        self.rec_tensor = np.array(self.rec_tensor)
 
-        return self.origin_tensor, self.rec_tensor 
+        if dask_arrays:
+            self.origin_tensor = da.from_array(self.origin_tensor, chunks="auto")
+            self.rec_tensor = da.from_array(self.rec_tensor, chunks="auto")
+
+        return self.origin_tensor, self.rec_tensor
 
 
 class GYSELAmostunstableDiag:
+    """
+    Computes the most unstable fourier modes diag tensors 
+    from GYSELA scripts
+    """
 
     def __init__(self, origin_dir, reconstructions_dir):
+        """ 
+        - origin_dir : where initial .h5 data is contained
+        - rec_dir : where post-compresison reconstructions are contained
+        """
 
-        self.origin_dir = origin_dir 
+        self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
-        self.origin_files = os.listdir(self.origin_dir) 
-        self.origin_files.sort()  
+        self.origin_files = os.listdir(self.origin_dir)
+        self.origin_files.sort()
         # Since we also generate .json files in compressions
         self.rec_files = list(
-            filter(
-                lambda s: s[-3:] == ".h5", os.listdir(self.reconstructions_dir)
-            )
+            filter(lambda s: s[-3:] == ".h5", os.listdir(self.reconstructions_dir))
         )
-        self.rec_files.sort() 
-    
+        self.rec_files.sort()
+
     def loadHDF5(self, init_state_dir):
+        """
+        Copy of the function of the GYSELA_diag.py script to load HDF5s 
+        - init_state_dir : the directory where GYSELA init_state .h5 files 
+                            are located 
+        """
 
         self.H5conf = H5ut.loadHDF5(init_state_dir + "init_state_r001.h5")
         H5magnet = H5ut.loadHDF5(init_state_dir + "magnet_config_r001.h5")
@@ -124,40 +175,32 @@ class GYSELAmostunstableDiag:
         Phi2dFileList_rec = glob.glob(Phi2dFileNames_rec)
         Phi2dFileList_rec.sort()
         self.H5Phi2D_rec = H5ut.loadHDF5(Phi2dFileList_rec)
-        self.H5Phi2D_rec.time_diag = self.H5Phi2D.time_diag 
+        self.H5Phi2D_rec.time_diag = self.H5Phi2D.time_diag
 
-    def compute(self, init_state_dir):
+    def compute(self, init_state_dir, dask_arrays=False):
+        """
+        computes the diag
+        - dask_arrays : bool, True -> tensors are considered as dask arrays
+                                        np.ndarrays otherwise 
+        """
 
-        self.loadHDF5(init_state_dir) 
+        # For this diag the data is necessarily Phithphi cuts
+        key_name = "Phithphi"
+        key_length = len(key_name)
+        # The reconstruction directories are built such that their name
+        # is key_name + "_" + compression_method_name
+        self.applied_method = self.reconstructions_dir[key_length + 1 :]
+
+        self.loadHDF5(init_state_dir)
 
         modes_m0, modes_mn = GetPhi2Dmostunstable(self.H5conf, self.H5Phi2D)
-        modes_m0_rec, modes_mn_rec = GetPhi2Dmostunstable(
-            self.H5conf, self.H5Phi2D_rec
-        )
+        modes_m0_rec, modes_mn_rec = GetPhi2Dmostunstable(self.H5conf, self.H5Phi2D_rec)
 
         self.origin_tensor = fourier_diag_to_tensor(modes_m0, modes_mn)
         self.rec_tensor = fourier_diag_to_tensor(modes_m0_rec, modes_mn_rec)
 
+        if dask_arrays:
+            self.origin_tensor = da.from_array(self.origin_tensor)
+            self.rec_tensor = da.from_array(self.rec_tensor)
+
         return self.origin_tensor, self.rec_tensor
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-

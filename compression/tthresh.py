@@ -1,6 +1,7 @@
 # from matplotlib.pyplot import text
 import numpy as np
 from subprocess import run
+from time import time
 
 
 def tthresh_call_compression_decompression(

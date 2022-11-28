@@ -1,6 +1,6 @@
-from time import time 
-import pandas as pd 
-import numpy as np 
+from time import time
+import pandas as pd
+import numpy as np
 import tempfile
 import re
 import os
@@ -16,7 +16,6 @@ from .compression_algos import (
 from .nD_ezw import ZeroTreeEncoder, ZeroTreeDecoder
 from .H5_conversions import array_to_h5, h5_to_array
 from imports.math_tools import byte_size
-
 
 
 class wavelet_percent_deflateCompressor:
@@ -237,7 +236,7 @@ class ezwCompressor:
 
             for comp_time, comp_rate, decomp_time in comp_results:
                 self.compression_time.append(comp_time)
-                self.compression_rate.append(comp_rate) 
+                self.compression_rate.append(comp_rate)
                 self.decompression_time.append(decomp_time)
 
             # Saving compression results as json in the reconstruction dir

@@ -10,8 +10,6 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import mean_squared_error
 from scipy.fft import fft2, fftn, fftshift
-import itertools
-import pandas as pd
 
 
 def timer(func):
@@ -141,18 +139,6 @@ def Linf_rel_error(x, y):
     return Linf_norm(A)
 
 
-# def L2_rel_error(image, other_image):
-#     return L2_error(image, other_image) / L2_norm(image)
-
-
-# def L1_rel_error(image, other_image):
-#     return L1_error(image, other_image) / L1_norm(image)
-
-
-# def Linf_rel_error(image, other_image):
-#     return Linf_error(image, other_image) / Linf_norm(image)
-
-
 def L1_fourier_norm(x):
     return L1_norm(np.abs(fftn(x)))
 
@@ -264,41 +250,18 @@ def Linf_fourier_rel_error(x, y):
 def mse(x, y):
     """
     Computes the mean square error 
+    Input : x, y should be two np.ndarray or dask.array.core.Array 
+    objetcs
     """
-    x_array = np.array(x)
-    y_array = np.array(y)
-    n = len(x_array.shape)
-    assert len(y_array.shape) == n, "Arrays should share their dimension"
-    if not x_array.shape == y_array.shape:
-        limiting_shapes = [
-            slice(min(x_array.shape[dim], y_array.shape[dim])) for dim in range(n)
-        ]
+    n = len(x.shape)
+    assert len(y.shape) == n, "Arrays should share their dimension"
+    if not x.shape == y.shape:
+        limiting_shapes = [slice(min(x.shape[dim], y.shape[dim])) for dim in range(n)]
         indices = tuple(limiting_shapes)
-        A = x[indices] - y[indices]
-    else:
-        A = x - y
-    factor = np.product(np.array(A.shape))
-    return np.sum(np.abs(A) ** 2)  / factor
+        x = x[indices]
+        y = y[indices]
 
-
-def fourier_mse(x, y):
-    """
-    Computes the mse in Fourier Space 
-    """
-    x_array = np.array(x)
-    y_array = np.array(y)
-    n = len(x_array.shape)
-    assert len(y_array.shape) == n, "Arrays should share their dimension"
-    if not x_array.shape == y_array.shape:
-        limiting_shapes = [
-            slice(min(x_array.shape[dim], y_array.shape[dim])) for dim in range(n)
-        ]
-        indices = tuple(limiting_shapes)
-        A = x[indices] - y[indices]
-    else:
-        A = x - y
-    factor = np.product(np.array(A.shape))
-    return L2_fourier_norm(A) / factor
+    return (np.abs(x - y) ** 2).mean()
 
 
 def rmse(x, y):
@@ -312,88 +275,42 @@ def psnr(x, y):
     """
     Computes the Peak Signal-to-Noise Ratio as defined in tthresh paper
     """
-    return 20 * np.log10(np.max(x) - np.min(x)) - 20 * np.log10(2 * rmse(x,y))
+    return 20 * np.log10(np.max(x) - np.min(x)) - 20 * np.log10(2 * rmse(x, y))
 
 
-def corrected_local_rel_error(x, y):
-    """
-    We create correct the "local relative error" not to divide by 0 
-    """
-    x_array = np.array(x)
-    y_array = np.array(y)
-    n = len(x_array.shape)
-    assert len(y_array.shape) == n, "Arrays should share their dimension"
-    if not x_array.shape == y_array.shape:
-        limiting_shapes = [
-            slice(min(x_array.shape[dim], y_array.shape[dim])) for dim in range(n)
-        ]
-        indices = tuple(limiting_shapes)
-        x = x[indices] 
-        y = y[indices] 
-
-    # m1 = (x - y) / x
-    # m2 = np.zeros_like(x) 
-    # m3 = np.inf * np.ones_like(x)      
-    # A = (x != 0) * m1 + (x == 0)*(x == y) * m2 + (x == 0)*(x != y) * m3
-
-    if np.any(x == 0):
-        return np.inf
-    else: 
-        A = (x - y) / x  
-
-    return L2_norm(A) 
-
-
-def lsnr(x,y):
-    """
-    Computes the "local signal to noise ratio" as a relative metric 
-    """
-    return -20 * np.log10(corrected_local_rel_error(x,y))
-
-def hybridsnr_error(x,y,p):
+def hybridsnr_error(x, y, p):
     """
     An hybrid error that suppresses the pathologies of pointwise_relative 
+    Input : x,y two np.ndarray or dask.array.core.Array objects 
     """
-
-    x_array = np.array(x)
-    y_array = np.array(y)
-    n = len(x_array.shape)
-    assert len(y_array.shape) == n, "Arrays should share their dimension"
+    n = len(x.shape)
+    assert len(y.shape) == n, "Arrays should share their dimension"
     assert (0 < p) and (p <= 1), "Parameter should be between 0 and 1, not null"
-    if not x_array.shape == y_array.shape:
-        limiting_shapes = [
-            slice(min(x_array.shape[dim], y_array.shape[dim])) for dim in range(n)
-        ]
+    if not x.shape == y.shape:
+        limiting_shapes = [slice(min(x.shape[dim], y.shape[dim])) for dim in range(n)]
         indices = tuple(limiting_shapes)
-        x = x[indices] 
-        y = y[indices] 
-    
-    m1 = p *( 0.5 * np.abs(np.max(x) - np.min(x))) * np.ones_like(x) 
-    m2 = (1-p) * np.abs(x)  
+        x = x[indices]
+        y = y[indices]
 
-    factor = np.product(x.shape) ** 0.5 
-    m = np.abs(x-y) / (m1 + m2)
-    return L2_norm(m) / factor  
+    m1 = p * (0.5 * np.abs(np.max(x) - np.min(x))) * np.ones_like(x)
+    m2 = (1 - p) * np.abs(x)
 
-def hsnr(x,y,p):
+    m = np.abs(x - y) / (m1 + m2)
+    return ((m ** 2).mean()) ** 0.5
+
+
+def hsnr(x, y, p):
     """
     Computes the hybrid-snr
     """
-    return -20 * np.log10(hybridsnr_error(x,y,p)) 
+    return -20 * np.log10(hybridsnr_error(x, y, p))
 
 
 def global_L2_rel_error(x, y):
     """
     Computes the "global" relative L2 error as defined in tthresh paper 
     """
-    return L2_error(x,y) / L2_norm(x)
-
-
-def fourier_PSNR(x, y):
-    """
-    Computes the PSNR in fourier space
-    """
-    return 20 * np.log10(np.max(np.abs(fftn(x)))) - 10 * np.log10(fourier_mse(x, y))
+    return L2_error(x, y) / L2_norm(x)
 
 
 def PRD(x, y):
