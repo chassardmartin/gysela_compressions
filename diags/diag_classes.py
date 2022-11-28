@@ -26,7 +26,7 @@ class IdentityDiag:
 
         self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
-        self.diag_dir = self.reconstructions_dir + "/diags"
+        self.diag_dir = self.reconstructions_dir + "diags/"
         self.origin_files = os.listdir(self.origin_dir)
         self.origin_files.sort()
         # Since we also generate .json files in compressions
@@ -106,7 +106,7 @@ class FourierDiag:
 
         self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
-        self.diag_dir = self.reconstructions_dir + "/diags"
+        self.diag_dir = self.reconstructions_dir + "diags/"
         self.origin_files = os.listdir(self.origin_dir)
         self.origin_files.sort()
         # Since we also generate .json files in compressions
@@ -187,7 +187,7 @@ class GYSELAmostunstableDiag:
 
         self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
-        self.diag_dir = self.reconstructions_dir + "/diags"
+        self.diag_dir = self.reconstructions_dir + "diags/"
         self.origin_files = os.listdir(self.origin_dir)
         self.origin_files.sort()
         # Since we also generate .json files in compressions

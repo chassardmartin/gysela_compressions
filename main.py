@@ -10,8 +10,10 @@ __date__ = "08/2022"
 import pywt
 from time import time
 import dask.bag as db
-import numpy as np
+import numpy as np 
 import dask.array as da
+import os
+import glob 
 
 ### My own imports
 # from compression.compression_classes import (
@@ -27,21 +29,22 @@ import dask.array as da
 # )
 from imports.math_tools import rmse
 from imports.metric_classes import psnrMetric, hsnrMetric
+from diags.diag_classes import(
+    IdentityDiag,
+    FourierDiag,
+    GYSELAmostunstableDiag
+)
+from imports.metric_classes import(
+    psnrMetric,
+    hsnrMetric
+)
 
 
 if __name__ == "__main__":
     print("imports successful")
 
-    x = da.random.random((100, 100))
-    y = da.random.random((100, 100))
-
-    m = hsnrMetric(0.1, x,y) 
-
-    print(m.compute())
-
     
-
-
+    ##### Compressions ######
 
     # h5_dir = "/gpfs/workdir/chassardm/virginie_data/Phi2D_1/"
     # rec_dir = "/gpfs/workdir/chassardm/virginie_data/rec_Phi2D_1/"
@@ -79,16 +82,35 @@ if __name__ == "__main__":
     #     phirth_recs.append(compressor.compute("Phirth"))
     #     phithphi_recs.append(compressors.compute("Phithphi"))
 
-    ### Executes compressions once for this slice see for diags after.
+    ##### Diags ###### 
 
-    # Phirth_compressions = compressor_bag.map(
-    #     lambda x: x.compute("Phirth")
-    # ) # Gives the reconstructions paths
-    # Phithphi_compressions = compressor_bag.map(
-    #     lambda x: x.compute("Phithphi")
-    # ) # Gives the reconstructions paths
+    origin_dir = "" 
+    rec_path = "" 
+    reconstructions_dirs = glob.glob(rec_path + "Phirth*")
+    reconstructions_dirs.sort() 
 
-    # Phirth_rec_paths = Phirth_compressions.compute()
-    # Phithphi_rec_paths = Phithphi_compressions.compute()
 
-    # print(time() - t_flag)
+    for rec_dir in reconstructions_dirs: 
+        diags_dir = os.path.join(rec_dir, "diags")
+        if not os.path.isdir(diags_dir):
+            os.mkdir(diags_dir)
+
+        identity = IdentityDiag(origin_dir, rec_dir) 
+        fourier = FourierDiag(origin_dir, rec_dir) 
+        most_unstable = GYSELAmostunstableDiag(origin_dir, rec_dir) 
+
+        identity.compute("Phirth")
+        fourier.compute("Phirth") 
+        most_unstable.compute() 
+
+        identity.add_metric(psnrMetric)
+        identity.add_metric(hsnrMetric, parameter=0.1) 
+        fourier.add_metric(psnrMetric)
+        fourier.add_metric(hsnrMetric, parameter=0.1) 
+        most_unstable.add_metric(psnrMetric) 
+        most_unstable.add_metric(hsnrMetric, parameter=0.1) 
+
+        identity.metric_qualities_to_json() 
+        fourier.metric_qualities_to_json() 
+        most_unstable.metric_qualities_to_json() 
+        
