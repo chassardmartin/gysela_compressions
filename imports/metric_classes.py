@@ -6,13 +6,16 @@ class psnrMetric:
 
         self.tensor1 = tensor1
         self.tensor2 = tensor2
+        self.__name__ = "psnr" 
 
     def compute(self, time_series=False):
         """
         computes the error in that metric
         -time_series : bool, True -> we consider the whole tensor 
-                                as the data
-                             Otherwise, the errors are computed time_wise
+                                as the data. Output is a scalar
+                             Otherwise, the errors are computed time_wise.
+                                        Output is a list. 
+        
         """
         if time_series:
             x = self.tensor1
@@ -36,13 +39,15 @@ class hsnrMetric:
         self.parameter = p
         self.tensor1 = tensor1
         self.tensor2 = tensor2
+        self.__name__ = "hsnr" + "_" + str(p) 
 
     def compute(self, time_series=False):
         """
         computes the error in that metric
         -time_series : bool, True -> we consider the whole tensor 
-                                as the data
-                             Otherwise, the errors are computed time_wise
+                                as the data. Output is a scalar
+                             Otherwise, the errors are computed time_wise.
+                                        Output is a list. 
         """
         if time_series:
             x = self.tensor1

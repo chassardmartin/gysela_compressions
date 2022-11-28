@@ -8,6 +8,7 @@ import imports.HDF5utils as H5ut
 from imports.diag_utils import fourier_diag_to_tensor
 import glob
 from .GYSELA_diag import GetPhi2Dmostunstable
+import pandas as pd 
 
 
 class IdentityDiag:
@@ -25,6 +26,7 @@ class IdentityDiag:
 
         self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
+        self.diag_dir = self.reconstructions_dir + "/diags" 
         self.origin_files = os.listdir(self.origin_dir)
         self.origin_files.sort()
         # Since we also generate .json files in compressions
@@ -32,6 +34,9 @@ class IdentityDiag:
             filter(lambda s: s[-3:] == ".h5", os.listdir(self.reconstructions_dir))
         )
         self.rec_files.sort()
+        self.qualities = {} 
+        self.__name__ = "identity" 
+        self.json_path = self.diag_dir + self.__name__ + ".json" 
 
     def compute(self, key_name, dask_arrays=False):
         """
@@ -40,35 +45,51 @@ class IdentityDiag:
         - dask_arrays : bool, True -> tensors are considered as dask arrays
                                         np.ndarrays otherwise 
         """
+        if not os.path.isfile(self.json_path):
+            # In that case no diag was executed 
+    
+            self.origin_tensor = []
+            self.rec_tensor = []
 
-        key_length = len(key_name)
-        # The reconstruction directories are built such that their name
-        # is key_name + "_" + compression_method_name
-        self.applied_method = self.reconstructions_dir[key_length + 1 :]
+            def build(origin_file, rec_file):
+                origin_data = h5_to_array(self.origin_dir + origin_file, key_name)
+                rec_data = h5_to_array(self.reconstructions_dir + rec_file, key_name)
+                return origin_data, rec_data
 
-        self.origin_tensor = []
-        self.rec_tensor = []
+            files = db.from_sequence(zip(self.origin_files, self.rec_files))
+            tensors = files.map(lambda x: build(x[0], x[1])).compute()
 
-        def build(origin_file, rec_file):
-            origin_data = h5_to_array(self.origin_dir + origin_file, key_name)
-            rec_data = h5_to_array(self.reconstructions_dir + rec_file, key_name)
-            return origin_data, rec_data
+            for origin_data, rec_data in tensors:
+                self.origin_tensor.append(origin_data)
+                self.rec_tensor.append(rec_data)
 
-        files = db.from_sequence(zip(self.origin_files, self.rec_files))
-        tensors = files.map(lambda x: build(x[0], x[1])).compute()
+            self.origin_tensor = np.array(self.origin_tensor)
+            self.rec_tensor = np.array(self.rec_tensor)
 
-        for origin_data, rec_data in tensors:
-            self.origin_tensor.append(origin_data)
-            self.rec_tensor.append(rec_data)
+            if dask_arrays:
+                self.origin_tensor = da.from_array(self.origin_tensor)
+                self.rec_tensor = da.from_array(self.rec_tensor)
 
-        self.origin_tensor = np.array(self.origin_tensor)
-        self.rec_tensor = np.array(self.rec_tensor)
-
-        if dask_arrays:
-            self.origin_tensor = da.from_array(self.origin_tensor)
-            self.rec_tensor = da.from_array(self.rec_tensor)
-
-        return self.origin_tensor, self.rec_tensor
+    def add_metric(self, metric, parameter = None, time_series=False):
+        """
+        - metric : a Metric class from the imports/metric_classes.py script
+                    to measure quality 
+        example : psnrMetric, hsnrMetric  
+        """
+        if parameter is None:
+            m = metric(self.origin_tensor, self.rec_tensor)
+        else:
+            m = metric(parameter, self.origin_tensor, self.rec_tensor)
+        result = m.compute(time_series) 
+        self.qualities[metric.__name__] = result 
+    
+    def metric_qualities_to_json(self):
+        """
+        Saves the computed metric errors in a json file in the 
+            self.diag_dir directory
+        """
+        df = pd.DataFrame(self.qualities) 
+        df.to_json(self.json_path)
 
 
 class FourierDiag:
@@ -85,6 +106,7 @@ class FourierDiag:
 
         self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
+        self.diag_dir = self.reconstructions_dir + "/diags" 
         self.origin_files = os.listdir(self.origin_dir)
         self.origin_files.sort()
         # Since we also generate .json files in compressions
@@ -92,6 +114,10 @@ class FourierDiag:
             filter(lambda s: s[-3:] == ".h5", os.listdir(self.reconstructions_dir))
         )
         self.rec_files.sort()
+        self.qualities = {} 
+        self.__name__ = "fourier" 
+        self.json_path = self.diag_dir + self.__name__ + ".json" 
+        
 
     def compute(self, key_name, dask_arrays=False):
         """
@@ -100,35 +126,51 @@ class FourierDiag:
         - dask_arrays : bool, True -> tensors are considered as dask arrays
                                         np.ndarrays otherwise 
         """
+        if not os.path.isfile(self.json_path):
+            #In that case no diag was executed 
 
-        key_length = len(key_name)
-        # The reconstruction directories are built such that their name
-        # is key_name + "_" + compression_method_name
-        self.applied_method = self.reconstructions_dir[key_length + 1 :]
+            self.origin_tensor = []
+            self.rec_tensor = []
 
-        self.origin_tensor = []
-        self.rec_tensor = []
+            def build(origin_file, rec_file):
+                origin_data = h5_to_array(self.origin_dir + origin_file, key_name)
+                rec_data = h5_to_array(self.reconstructions_dir + rec_file, key_name)
+                return np.abs(fftn(origin_data)), np.abs(fftn(rec_data))
 
-        def build(origin_file, rec_file):
-            origin_data = h5_to_array(self.origin_dir + origin_file, key_name)
-            rec_data = h5_to_array(self.reconstructions_dir + rec_file, key_name)
-            return np.abs(fftn(origin_data)), np.abs(fftn(rec_data))
+            files = db.from_sequence(zip(self.origin_files, self.rec_files))
+            tensors = files.map(lambda x: build(x[0], x[1])).compute()
 
-        files = db.from_sequence(zip(self.origin_files, self.rec_files))
-        tensors = files.map(lambda x: build(x[0], x[1])).compute()
+            for origin_data, rec_data in tensors:
+                self.origin_tensor.append(origin_data)
+                self.rec_tensor.append(rec_data)
 
-        for origin_data, rec_data in tensors:
-            self.origin_tensor.append(origin_data)
-            self.rec_tensor.append(rec_data)
+            self.origin_tensor = np.array(self.origin_tensor)
+            self.rec_tensor = np.array(self.rec_tensor)
 
-        self.origin_tensor = np.array(self.origin_tensor)
-        self.rec_tensor = np.array(self.rec_tensor)
+            if dask_arrays:
+                self.origin_tensor = da.from_array(self.origin_tensor, chunks="auto")
+                self.rec_tensor = da.from_array(self.rec_tensor, chunks="auto")
 
-        if dask_arrays:
-            self.origin_tensor = da.from_array(self.origin_tensor, chunks="auto")
-            self.rec_tensor = da.from_array(self.rec_tensor, chunks="auto")
-
-        return self.origin_tensor, self.rec_tensor
+    def add_metric(self, metric, parameter = None, time_series=False):
+        """
+        - metric : a Metric class from the imports/metric_classes.py script
+                    to measure quality
+        example : psnrMetric, hsnrMetric  
+        """
+        if parameter is None:
+            m = metric(self.origin_tensor, self.rec_tensor)
+        else:
+            m = metric(parameter, self.origin_tensor, self.rec_tensor)
+        result = m.compute(time_series) 
+        self.qualities[metric.__name__] = result 
+    
+    def metric_qualities_to_json(self):
+        """
+        Saves the computed metric errors in a json file in the 
+            self.diag_dir directory
+        """
+        df = pd.DataFrame(self.qualities) 
+        df.to_json(self.json_path) 
 
 
 class GYSELAmostunstableDiag:
@@ -145,6 +187,7 @@ class GYSELAmostunstableDiag:
 
         self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
+        self.diag_dir = self.reconstructions_dir + "/diags"
         self.origin_files = os.listdir(self.origin_dir)
         self.origin_files.sort()
         # Since we also generate .json files in compressions
@@ -152,6 +195,9 @@ class GYSELAmostunstableDiag:
             filter(lambda s: s[-3:] == ".h5", os.listdir(self.reconstructions_dir))
         )
         self.rec_files.sort()
+        self.qualities = {} 
+        self.__name__ = "GYSELA_most_unstable" 
+        self.json_path = self.diag_dir + self.__name__ + ".json" 
 
     def loadHDF5(self, init_state_dir):
         """
@@ -183,24 +229,38 @@ class GYSELAmostunstableDiag:
         - dask_arrays : bool, True -> tensors are considered as dask arrays
                                         np.ndarrays otherwise 
         """
+        if not os.path.isfile(self.json_path):
+            # In that case no diag was executed 
 
-        # For this diag the data is necessarily Phithphi cuts
-        key_name = "Phithphi"
-        key_length = len(key_name)
-        # The reconstruction directories are built such that their name
-        # is key_name + "_" + compression_method_name
-        self.applied_method = self.reconstructions_dir[key_length + 1 :]
+            self.loadHDF5(init_state_dir)
 
-        self.loadHDF5(init_state_dir)
+            modes_m0, modes_mn = GetPhi2Dmostunstable(self.H5conf, self.H5Phi2D)
+            modes_m0_rec, modes_mn_rec = GetPhi2Dmostunstable(self.H5conf, self.H5Phi2D_rec)
 
-        modes_m0, modes_mn = GetPhi2Dmostunstable(self.H5conf, self.H5Phi2D)
-        modes_m0_rec, modes_mn_rec = GetPhi2Dmostunstable(self.H5conf, self.H5Phi2D_rec)
+            self.origin_tensor = fourier_diag_to_tensor(modes_m0, modes_mn)
+            self.rec_tensor = fourier_diag_to_tensor(modes_m0_rec, modes_mn_rec)
 
-        self.origin_tensor = fourier_diag_to_tensor(modes_m0, modes_mn)
-        self.rec_tensor = fourier_diag_to_tensor(modes_m0_rec, modes_mn_rec)
+            if dask_arrays:
+                self.origin_tensor = da.from_array(self.origin_tensor)
+                self.rec_tensor = da.from_array(self.rec_tensor)
 
-        if dask_arrays:
-            self.origin_tensor = da.from_array(self.origin_tensor)
-            self.rec_tensor = da.from_array(self.rec_tensor)
-
-        return self.origin_tensor, self.rec_tensor
+    def add_metric(self, metric, parameter=None, time_series=False):
+        """
+        - metric : a Metric class from the imports/metric_classes.py script
+                    to measure quality 
+        example : psnrMetric, hsnrMetric  
+        """
+        if parameter is None:
+            m = metric(self.origin_tensor, self.rec_tensor)
+        else:
+            m = metric(parameter, self.origin_tensor, self.rec_tensor)
+        result = m.compute(time_series) 
+        self.qualities[metric.__name__] = result 
+    
+    def metric_qualities_to_json(self):
+        """
+        Saves the computed metric errors in a json file in the 
+            self.diag_dir directory
+        """
+        df = pd.DataFrame(self.qualities) 
+        df.to_json(self.json_path) 
