@@ -47,7 +47,6 @@ class IdentityDiag:
         """
         if not os.path.isfile(self.json_path):
             # In that case no diag was executed
-
             self.origin_tensor = []
             self.rec_tensor = []
 
@@ -80,6 +79,7 @@ class IdentityDiag:
             m = metric(self.origin_tensor, self.rec_tensor)
         else:
             m = metric(parameter, self.origin_tensor, self.rec_tensor)
+
         result = m.compute(time_series)
         self.qualities[metric.__name__] = result
 
@@ -160,6 +160,7 @@ class FourierDiag:
             m = metric(self.origin_tensor, self.rec_tensor)
         else:
             m = metric(parameter, self.origin_tensor, self.rec_tensor)
+
         result = m.compute(time_series)
         self.qualities[metric.__name__] = result
 
@@ -230,7 +231,6 @@ class GYSELAmostunstableDiag:
         """
         if not os.path.isfile(self.json_path):
             # In that case no diag was executed
-
             self.loadHDF5(init_state_dir)
 
             modes_m0, modes_mn = GetPhi2Dmostunstable(self.H5conf, self.H5Phi2D)
@@ -255,6 +255,7 @@ class GYSELAmostunstableDiag:
             m = metric(self.origin_tensor, self.rec_tensor)
         else:
             m = metric(parameter, self.origin_tensor, self.rec_tensor)
+
         result = m.compute(time_series)
         self.qualities[metric.__name__] = result
 

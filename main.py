@@ -26,17 +26,22 @@ import dask.array as da
 #     tthresh_call_decompression,
 # )
 from imports.math_tools import rmse
+from imports.metric_classes import psnrMetric, hsnrMetric
+
 
 if __name__ == "__main__":
     print("imports successful")
 
-    x = np.random.random((100, 100))
-    y = np.random.random((100, 100))
+    x = da.random.random((100, 100))
+    y = da.random.random((100, 100))
 
-    da_x = da.from_array(x)
-    da_y = da.from_array(y)
+    m = hsnrMetric(0.1, x,y) 
 
-    print(rmse(da_x, da_y).compute() == rmse(x, y))
+    print(m.compute())
+
+    
+
+
 
     # h5_dir = "/gpfs/workdir/chassardm/virginie_data/Phi2D_1/"
     # rec_dir = "/gpfs/workdir/chassardm/virginie_data/rec_Phi2D_1/"

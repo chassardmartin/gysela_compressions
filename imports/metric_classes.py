@@ -1,4 +1,5 @@
 from .math_tools import psnr, hsnr
+import dask.array as da
 
 
 class psnrMetric:
@@ -20,16 +21,25 @@ class psnrMetric:
         if time_series:
             x = self.tensor1
             y = self.tensor2
-            return psnr(x, y)
+            res = psnr(x, y)
+            # If tensors were dask arrays
+            if type(res) is da.core.Array:
+                res = res.compute()
+            return res
         else:
             res = []
+            dim = len(self.tensor1.shape)
             T = self.tensor1.shape[0]
-            for t in self.range(T):
+            for t in range(T):
                 _slice = (slice(t, t + 1),)
-                _slice += (slice(None),) * (T - 1)
+                _slice += (slice(None),) * (dim - 1)
                 x = self.tensor1[_slice]
                 y = self.tensor2[_slice]
-                res.append(psnr(x, y))
+                current_res = psnr(x, y)
+                # If tensors were dask arrays
+                if type(current_res) is da.core.Array:
+                    current_res = current_res.compute()
+                res.append(current_res)
             return res
 
 
@@ -52,14 +62,21 @@ class hsnrMetric:
         if time_series:
             x = self.tensor1
             y = self.tensor2
-            return hsnr(self.parameter, x, y)
+            res = hsnr(self.parameter, x, y)
+            if type(res) is da.core.Array:
+                res = res.compute()
+            return res
         else:
             res = []
+            dim = len(self.tensor1.shape)
             T = self.tensor1.shape[0]
-            for t in self.range(T):
+            for t in range(T):
                 _slice = (slice(t, t + 1),)
-                _slice += (slice(None),) * (T - 1)
+                _slice += (slice(None),) * (dim - 1)
                 x = self.tensor1[_slice]
                 y = self.tensor2[_slice]
-                res.append(hsnr(x, y, self.parameter))
+                current_res = hsnr(self.parameter, x, y)
+                if type(current_res) is da.core.Array:
+                    current_res = current_res.compute()
+                res.append(current_res)
             return res
