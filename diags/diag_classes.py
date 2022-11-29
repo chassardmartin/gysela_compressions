@@ -78,7 +78,7 @@ class IdentityDiag:
             m = metric(parameter, self.origin_tensor, self.rec_tensor)
 
         result = m.compute(time_series)
-        self.qualities[metric.__name__] = result
+        self.qualities[m.__name__] = result
 
     def metric_qualities_to_json(self):
         """
@@ -157,7 +157,7 @@ class FourierDiag:
             m = metric(parameter, self.origin_tensor, self.rec_tensor)
 
         result = m.compute(time_series)
-        self.qualities[metric.__name__] = result
+        self.qualities[m.__name__] = result
 
     def metric_qualities_to_json(self):
         """
@@ -252,7 +252,7 @@ class GYSELAmostunstableDiag:
             m = metric(parameter, self.origin_tensor, self.rec_tensor)
 
         result = m.compute(time_series)
-        self.qualities[metric.__name__] = result
+        self.qualities[m.__name__] = result
 
     def metric_qualities_to_json(self):
         """
