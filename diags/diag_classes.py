@@ -1,3 +1,4 @@
+
 import os
 import numpy as np
 import dask.bag as db
@@ -15,7 +16,7 @@ class IdentityDiag:
     """
     Computes the "identity" diag chich means doing nothing, 
         but assembling data contained in origin and reconstructions dir 
-        as two individual (np or dask.array) tensors.
+        as two individual (dask.array) tensors.
     """
 
     def __init__(self, origin_dir, reconstructions_dir):
@@ -65,7 +66,6 @@ class IdentityDiag:
             self.origin_tensor = da.from_array(self.origin_tensor) 
             self.rec_tensor = da.from_array(self.rec_tensor) 
             
-
     def add_metric(self, metric, parameter=None, time_series=False):
         """
         - metric : a Metric class from the imports/metric_classes.py script
@@ -170,8 +170,8 @@ class FourierDiag:
 
 class GYSELAmostunstableDiag:
     """
-    Computes the most unstable fourier modes diag tensors 
-    from GYSELA scripts
+    Computes the most unstable fourier modes diag from 
+    GYSELA_diag.py script as tensors 
     """
 
     def __init__(self, origin_dir, reconstructions_dir):
@@ -221,8 +221,7 @@ class GYSELAmostunstableDiag:
     def compute(self, init_state_dir, dask_arrays=False):
         """
         computes the diag
-        - dask_arrays : bool, True -> tensors are considered as dask arrays
-                                        np.ndarrays otherwise 
+        - dask_arrays : bool, if True tensors will be dask arrays
         """
         if not os.path.isfile(self.json_path):
             # In that case no diag was executed

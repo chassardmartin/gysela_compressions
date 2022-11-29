@@ -4,7 +4,9 @@ import dask.array as da
 
 class psnrMetric:
     def __init__(self, tensor1, tensor2):
-
+        """
+        Initialize the metric with two tensors to compare 
+        """
         self.tensor1 = tensor1
         self.tensor2 = tensor2
         self.__name__ = "psnr"
@@ -45,6 +47,10 @@ class psnrMetric:
 
 class hsnrMetric:
     def __init__(self, p, tensor1, tensor2):
+        """
+        Initialize the metric with two tensors to compare 
+        - p : parameter in the definition of the metric, see hsnr
+        """
 
         self.parameter = p
         self.tensor1 = tensor1

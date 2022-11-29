@@ -84,9 +84,10 @@ if __name__ == "__main__":
 
     ##### Diags ###### 
 
+    key = "Phirth" 
     origin_dir = "" 
     rec_path = "" 
-    reconstructions_dirs = glob.glob(rec_path + "Phirth*")
+    reconstructions_dirs = glob.glob(rec_path + key + "*")
     reconstructions_dirs.sort() 
 
 
@@ -99,8 +100,8 @@ if __name__ == "__main__":
         fourier = FourierDiag(origin_dir, rec_dir) 
         most_unstable = GYSELAmostunstableDiag(origin_dir, rec_dir) 
 
-        identity.compute("Phirth")
-        fourier.compute("Phirth") 
+        identity.compute(key)
+        fourier.compute(key) 
         most_unstable.compute() 
 
         identity.add_metric(psnrMetric)
