@@ -4,7 +4,6 @@ import numpy as np
 import dask.bag as db
 import dask.array as da
 from compression.H5_conversions import h5_to_da
-from scipy.fft import fftn
 import imports.HDF5utils as H5ut
 from imports.diag_utils import fourier_diag_to_tensor
 import glob
@@ -130,7 +129,7 @@ class FourierDiag:
                 # h5 extraction to dask array 
                 origin_data = h5_to_da(self.origin_dir + origin_file, key_name)
                 rec_data = h5_to_da(self.reconstructions_dir + rec_file, key_name)
-                return np.abs(fftn(origin_data)), np.abs(fftn(rec_data))
+                return np.abs(da.fft.fftn(origin_data)), np.abs(da.fft.fftn(rec_data))
 
             files = db.from_sequence(zip(self.origin_files, self.rec_files))
             tensors = files.map(lambda x: build(x[0], x[1])).compute()
