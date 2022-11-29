@@ -13,7 +13,7 @@ class psnrMetric:
         """
         computes the error in that metric
         -time_series : bool, True -> we consider the whole tensor 
-                                as the data. Output is a scalar
+                                as the data. Output is a scalar.
                              Otherwise, the errors are computed time_wise.
                                         Output is a list. 
         

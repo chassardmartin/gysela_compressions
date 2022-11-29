@@ -16,12 +16,12 @@ import os
 import glob 
 
 ### My own imports
-# from compression.compression_classes import (
-#     wavelet_percent_deflateCompressor,
-#     ezwCompressor,
-#     tthreshCompressor,
-#     zfpCompressor,
-# )
+from compression.compression_classes import (
+    wavelet_percent_deflateCompressor,
+    ezwCompressor,
+    tthreshCompressor,
+    zfpCompressor,
+)
 # from compression.tthresh import (
 #     tthresh_call_compression2,
 #     tthresh_call_compression,
@@ -46,41 +46,41 @@ if __name__ == "__main__":
     
     ##### Compressions ######
 
-    # h5_dir = "/gpfs/workdir/chassardm/virginie_data/Phi2D_1/"
-    # rec_dir = "/gpfs/workdir/chassardm/virginie_data/rec_Phi2D_1/"
-    # diag_dir = rec_dir + "diags/"
+    h5_dir = "/gpfs/workdir/chassardm/virginie_data/Phi2D_1/"
+    rec_dir = "/gpfs/workdir/chassardm/virginie_data/rec_Phi2D_1/"
+    diag_dir = rec_dir + "diags/"
 
-    # init_state_dir = "/gpfs/workdir/chassardm/virginie_data/init_state/"
+    init_state_dir = "/gpfs/workdir/chassardm/virginie_data/init_state/"
 
-    # parameters = {
-    #     "wave_percent_deflate" : [0.03, 0.05, 0.1, 0.2, 0.4],
-    #     "ezw": [20, 25, 30, 35],
-    #     "zfp": [2, 4, 8, 16],
-    #     "tthresh": [("psnr", 40), ("psnr", 60), ("psnr", 80), ("psnr", 100)],
+    parameters = {
+        "wave_percent_deflate" : [0.03, 0.05, 0.1, 0.2, 0.4],
+        "ezw": [20, 25, 30, 35],
+        "zfp": [2, 4, 8, 16],
+        "tthresh": [("psnr", 40), ("psnr", 60), ("psnr", 80), ("psnr", 100)],
 
-    # }
+    }
 
-    # wavelet = pywt.Wavelet("bior4.4")
+    wavelet = pywt.Wavelet("bior4.4")
 
-    # wave_percent_deflate_compressors = [wavelet_percent_deflateCompressor(h5_dir, rec_dir, wavelet, r) for r in parameters["wave_percent_deflate"]]
-    # ezw_compressors = [ezwCompressor(h5_dir, rec_dir, wavelet, n) for n in parameters["ezw"]]
-    # zfp_compressors = [zfpCompressor(h5_dir, rec_dir, bpd) for bpd in parameters["zfp"]]
-    # tthresh_compressors = [tthreshCompressor(h5_dir, rec_dir, t[0], t[1]) for t in parameters["tthresh"]]
+    wave_percent_deflate_compressors = [wavelet_percent_deflateCompressor(h5_dir, rec_dir, wavelet, r) for r in parameters["wave_percent_deflate"]]
+    ezw_compressors = [ezwCompressor(h5_dir, rec_dir, wavelet, n) for n in parameters["ezw"]]
+    zfp_compressors = [zfpCompressor(h5_dir, rec_dir, bpd) for bpd in parameters["zfp"]]
+    tthresh_compressors = [tthreshCompressor(h5_dir, rec_dir, t[0], t[1]) for t in parameters["tthresh"]]
 
-    # compressors = wave_percent_deflate_compressors + ezw_compressors + zfp_compressors + tthresh_compressors
+    compressors = wave_percent_deflate_compressors + ezw_compressors + zfp_compressors + tthresh_compressors
 
-    # # compressor_bag = db.from_sequence(compressors)
+    # compressor_bag = db.from_sequence(compressors)
 
-    # t_flag = time()
+    t_flag = time()
 
-    # phirth_recs = []
-    # phithphi_recs = []
+    phirth_recs = []
+    phithphi_recs = []
 
-    # # Serial on this part, but files are dealt with in parallel
-    # # Shouldn't try having different levels of parallelism
-    # for compressor in compressors:
-    #     phirth_recs.append(compressor.compute("Phirth"))
-    #     phithphi_recs.append(compressors.compute("Phithphi"))
+    # Serial on this part, but files are dealt with in parallel
+    # Shouldn't try having different levels of parallelism
+    for compressor in compressors:
+        phirth_recs.append(compressor.compute("Phirth"))
+        phithphi_recs.append(compressors.compute("Phithphi"))
 
     ##### Diags ###### 
 

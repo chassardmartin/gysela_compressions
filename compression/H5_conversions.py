@@ -1,6 +1,6 @@
 import h5py
 
-# import dask.array as da
+import dask.array as da
 
 
 def h5_to_array(path, h5_key):
@@ -8,6 +8,11 @@ def h5_to_array(path, h5_key):
     with h5py.File(path, "r") as data:
         array = data[h5_key][()]
     return array
+
+def h5_to_da(path, h5_key):
+    with h5py.File(path, "r") as data:
+        array = data[h5_key][()]
+    return da.from_array(array, chunks="auto") 
 
 
 # def read_h5(data_dir, wanted_files, h5_key):

@@ -2,7 +2,7 @@ import os
 import numpy as np
 import dask.bag as db
 import dask.array as da
-from compression.H5_conversions import h5_to_array
+from compression.H5_conversions import h5_to_da
 from scipy.fft import fftn
 import imports.HDF5utils as H5ut
 from imports.diag_utils import fourier_diag_to_tensor
@@ -38,12 +38,10 @@ class IdentityDiag:
         self.__name__ = "identity"
         self.json_path = self.diag_dir + self.__name__ + ".json"
 
-    def compute(self, key_name, dask_arrays=False):
+    def compute(self, key_name):
         """
         computes the diag
         - key_name : key for .h5 data extraction
-        - dask_arrays : bool, True -> tensors are considered as dask arrays
-                                        np.ndarrays otherwise 
         """
         if not os.path.isfile(self.json_path):
             # In that case no diag was executed
@@ -51,23 +49,22 @@ class IdentityDiag:
             self.rec_tensor = []
 
             def build(origin_file, rec_file):
-                origin_data = h5_to_array(self.origin_dir + origin_file, key_name)
-                rec_data = h5_to_array(self.reconstructions_dir + rec_file, key_name)
+                # h5 extraction to dask array 
+                origin_data = h5_to_da(self.origin_dir + origin_file, key_name)
+                rec_data = h5_to_da(self.reconstructions_dir + rec_file, key_name)
                 return origin_data, rec_data
 
             files = db.from_sequence(zip(self.origin_files, self.rec_files))
             tensors = files.map(lambda x: build(x[0], x[1])).compute()
-
+            # creates list of dask arrays 
             for origin_data, rec_data in tensors:
                 self.origin_tensor.append(origin_data)
                 self.rec_tensor.append(rec_data)
-
-            self.origin_tensor = np.array(self.origin_tensor)
-            self.rec_tensor = np.array(self.rec_tensor)
-
-            if dask_arrays:
-                self.origin_tensor = da.from_array(self.origin_tensor, chunks="auto")
-                self.rec_tensor = da.from_array(self.rec_tensor, chunks="auto")
+            
+            # creates a new big dask array with time as the first dimension 
+            self.origin_tensor = da.from_array(self.origin_tensor) 
+            self.rec_tensor = da.from_array(self.rec_tensor) 
+            
 
     def add_metric(self, metric, parameter=None, time_series=False):
         """
@@ -118,12 +115,10 @@ class FourierDiag:
         self.__name__ = "fourier"
         self.json_path = self.diag_dir + self.__name__ + ".json"
 
-    def compute(self, key_name, dask_arrays=False):
+    def compute(self, key_name):
         """
         computes the diag
         - key_name : key for .h5 data extraction
-        - dask_arrays : bool, True -> tensors are considered as dask arrays
-                                        np.ndarrays otherwise 
         """
         if not os.path.isfile(self.json_path):
             # In that case no diag was executed
@@ -132,23 +127,23 @@ class FourierDiag:
             self.rec_tensor = []
 
             def build(origin_file, rec_file):
-                origin_data = h5_to_array(self.origin_dir + origin_file, key_name)
-                rec_data = h5_to_array(self.reconstructions_dir + rec_file, key_name)
+                # h5 extraction to dask array 
+                origin_data = h5_to_da(self.origin_dir + origin_file, key_name)
+                rec_data = h5_to_da(self.reconstructions_dir + rec_file, key_name)
                 return np.abs(fftn(origin_data)), np.abs(fftn(rec_data))
 
             files = db.from_sequence(zip(self.origin_files, self.rec_files))
             tensors = files.map(lambda x: build(x[0], x[1])).compute()
-
+            
+            # creates lists of dask arrays 
             for origin_data, rec_data in tensors:
                 self.origin_tensor.append(origin_data)
                 self.rec_tensor.append(rec_data)
+            
+            # creates a new big dask array with time as the first dimension 
+            self.origin_tensor = da.from_array(self.origin_tensor) 
+            self.rec_tensor = da.from_array(self.rec_tensor) 
 
-            self.origin_tensor = np.array(self.origin_tensor)
-            self.rec_tensor = np.array(self.rec_tensor)
-
-            if dask_arrays:
-                self.origin_tensor = da.from_array(self.origin_tensor, chunks="auto")
-                self.rec_tensor = da.from_array(self.rec_tensor, chunks="auto")
 
     def add_metric(self, metric, parameter=None, time_series=False):
         """
@@ -238,6 +233,7 @@ class GYSELAmostunstableDiag:
                 self.H5conf, self.H5Phi2D_rec
             )
 
+            # We consider here numpy arrays, no need for dask as this diag is 2D
             self.origin_tensor = fourier_diag_to_tensor(modes_m0, modes_mn)
             self.rec_tensor = fourier_diag_to_tensor(modes_m0_rec, modes_mn_rec)
 
