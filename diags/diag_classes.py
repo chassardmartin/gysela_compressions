@@ -26,7 +26,7 @@ class IdentityDiag:
 
         self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
-        self.diag_dir = self.reconstructions_dir + "diags/"
+        self.diag_dir = self.reconstructions_dir + "diags"
         self.origin_files = os.listdir(self.origin_dir)
         self.origin_files.sort()
         # Since we also generate .json files in compressions
@@ -36,13 +36,19 @@ class IdentityDiag:
         self.rec_files.sort()
         self.qualities = {}
         self.__name__ = "identity"
-        self.json_path = self.diag_dir + self.__name__ + ".json"
 
     def compute(self, key_name):
         """
         computes the diag
         - key_name : key for .h5 data extraction
         """
+        if not os.path.isdir(self.diag_dir):
+            os.mkdir(self.diag_dir)
+
+        self.diag_dir += '/' 
+        self.json_path = self.diag_dir + self.__name__ + ".json"
+
+
         if not os.path.isfile(self.json_path):
             # In that case no diag was executed
             self.origin_tensor = []
@@ -65,7 +71,7 @@ class IdentityDiag:
             self.origin_tensor = da.from_array(self.origin_tensor) 
             self.rec_tensor = da.from_array(self.rec_tensor) 
             
-    def add_metric(self, metric, parameter=None, time_series=False):
+    def add_metric(self, metric, parameter=None, time_series=True):
         """
         - metric : a Metric class from the imports/metric_classes.py script
                     to measure quality 
@@ -102,7 +108,7 @@ class FourierDiag:
 
         self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
-        self.diag_dir = self.reconstructions_dir + "diags/"
+        self.diag_dir = self.reconstructions_dir + "diags"
         self.origin_files = os.listdir(self.origin_dir)
         self.origin_files.sort()
         # Since we also generate .json files in compressions
@@ -112,13 +118,18 @@ class FourierDiag:
         self.rec_files.sort()
         self.qualities = {}
         self.__name__ = "fourier"
-        self.json_path = self.diag_dir + self.__name__ + ".json"
 
     def compute(self, key_name):
         """
         computes the diag
         - key_name : key for .h5 data extraction
         """
+        if not os.path.isdir(self.diag_dir):
+            os.mkdir(self.diag_dir)
+
+        self.diag_dir += '/' 
+        self.json_path = self.diag_dir + self.__name__ + ".json"
+
         if not os.path.isfile(self.json_path):
             # In that case no diag was executed
 
@@ -130,7 +141,7 @@ class FourierDiag:
                 origin_data = h5_to_da(self.origin_dir + origin_file, key_name)
                 rec_data = h5_to_da(self.reconstructions_dir + rec_file, key_name)
                 # To compute fft, data should have chunksize complete on the axis, just
-                # like wavelets ---> to fix ! 
+                # like wavelets, hence this rechunking 
                 origin_data = origin_data.rechunk(chunks=origin_data.shape) 
                 rec_data = rec_data.rechunk(chunks=rec_data.shape) 
 
@@ -149,7 +160,7 @@ class FourierDiag:
             self.rec_tensor = da.from_array(self.rec_tensor) 
 
 
-    def add_metric(self, metric, parameter=None, time_series=False):
+    def add_metric(self, metric, parameter=None, time_series=True):
         """
         - metric : a Metric class from the imports/metric_classes.py script
                     to measure quality
@@ -186,7 +197,7 @@ class GYSELAmostunstableDiag:
 
         self.origin_dir = origin_dir
         self.reconstructions_dir = reconstructions_dir
-        self.diag_dir = self.reconstructions_dir + "diags/"
+        self.diag_dir = self.reconstructions_dir + "diags"
         self.origin_files = os.listdir(self.origin_dir)
         self.origin_files.sort()
         # Since we also generate .json files in compressions
@@ -196,7 +207,6 @@ class GYSELAmostunstableDiag:
         self.rec_files.sort()
         self.qualities = {}
         self.__name__ = "GYSELA_most_unstable"
-        self.json_path = self.diag_dir + self.__name__ + ".json"
 
     def loadHDF5(self, init_state_dir):
         """
@@ -215,6 +225,7 @@ class GYSELAmostunstableDiag:
         Phi2dFileList = glob.glob(Phi2dFileNames)
         Phi2dFileList.sort()
         self.H5Phi2D = H5ut.loadHDF5(Phi2dFileList)
+        print(self.H5Phi2D.Phithphi.shape)
 
         Phi2dFileNames_rec = self.reconstructions_dir + "Phi2D_d*.h5"
         Phi2dFileList_rec = glob.glob(Phi2dFileNames_rec)
@@ -227,9 +238,18 @@ class GYSELAmostunstableDiag:
         computes the diag
         - dask_arrays : bool, if True tensors will be dask arrays
         """
+        if not os.path.isdir(self.diag_dir):
+            os.mkdir(self.diag_dir)
+
+        self.diag_dir += '/' 
+        self.json_path = self.diag_dir + self.__name__ + ".json"
+
         if not os.path.isfile(self.json_path):
             # In that case no diag was executed
             self.loadHDF5(init_state_dir)
+            print("HDF5 loaded successfuly")
+            print(self.H5Phi2D.Phithphi.shape) 
+            print(self.H5Phi2D_rec.Phithphi.shape)
 
             modes_m0, modes_mn = GetPhi2Dmostunstable(self.H5conf, self.H5Phi2D)
             modes_m0_rec, modes_mn_rec = GetPhi2Dmostunstable(
@@ -243,8 +263,14 @@ class GYSELAmostunstableDiag:
             if dask_arrays:
                 self.origin_tensor = da.from_array(self.origin_tensor)
                 self.rec_tensor = da.from_array(self.rec_tensor)
+            
+            # For the special case of this diag, we transpose to have time as the first dimension 
+            # Which is the case for Identity and Fourier 
 
-    def add_metric(self, metric, parameter=None, time_series=False):
+            self.origin_tensor = self.origin_tensor.transpose() 
+            self.rec_tensor = self.rec_tensor.transpose() 
+
+    def add_metric(self, metric, parameter=None, time_series=True):
         """
         - metric : a Metric class from the imports/metric_classes.py script
                     to measure quality 

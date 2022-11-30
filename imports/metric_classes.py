@@ -11,23 +11,24 @@ class psnrMetric:
         self.tensor2 = tensor2
         self.__name__ = "psnr"
 
-    def compute(self, time_series=False):
+    def compute(self, time_series):
         """
         computes the error in that metric
-        -time_series : bool, True -> we consider the whole tensor 
-                                as the data. Output is a scalar.
-                             Otherwise, the errors are computed time_wise.
+        -time_series : bool, False -> we consider the whole tensor 
+                                as the data. Output is a scalar (one-element list)
+                             True ->  the errors are computed time_wise.
                                         Output is a list. 
         
         """
-        if time_series:
+        if not time_series:
             x = self.tensor1
             y = self.tensor2
             res = psnr(x, y)
             # If tensors were dask arrays
             if type(res) is da.core.Array:
                 res = res.compute()
-            return res
+            # we return a one-element list to have type coherence
+            return [res]
         else:
             res = []
             dim = len(self.tensor1.shape)
@@ -57,21 +58,22 @@ class hsnrMetric:
         self.tensor2 = tensor2
         self.__name__ = "hsnr" + "_" + str(p)
 
-    def compute(self, time_series=False):
+    def compute(self, time_series):
         """
         computes the error in that metric
-        -time_series : bool, True -> we consider the whole tensor 
-                                as the data. Output is a scalar
-                             Otherwise, the errors are computed time_wise.
+        -time_series : bool, False -> we consider the whole tensor 
+                                as the data. Output is a scalar (one-element list)
+                             True ->  the errors are computed time_wise.
                                         Output is a list. 
         """
-        if time_series:
+        if not time_series:
             x = self.tensor1
             y = self.tensor2
             res = hsnr(self.parameter, x, y)
             if type(res) is da.core.Array:
                 res = res.compute()
-            return res
+            # we return a one-element list to have type coherence 
+            return [res]
         else:
             res = []
             dim = len(self.tensor1.shape)

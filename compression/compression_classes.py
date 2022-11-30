@@ -319,7 +319,7 @@ class tthreshCompressor:
                     array_to_h5(
                         reconstruction, self.reconstruction_path + _file, key_name
                     )
-                    return comp_time, _comp_rate, decomp_time
+                    return comp_time, _comp_rate, decomp_time, _file
 
             comp_results = self.files.map(lambda _f: compression(_f)).compute()
             json_path = self.reconstruction_path + "comp_results.json"
@@ -330,7 +330,8 @@ class tthreshCompressor:
             self.compression_rate = []
             self.decompression_time = []
 
-            for comp_time, comp_rate, decomp_time in comp_results:
+            for comp_time, comp_rate, decomp_time, _file in comp_results:
+                print(_file) 
                 self.compression_time.append(comp_time)
                 self.compression_rate.append(comp_rate)
                 self.decompression_time.append(decomp_time)

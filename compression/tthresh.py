@@ -59,12 +59,9 @@ def tthresh_call_compression(data, raw_dir, data_name, target="psnr", target_val
         data = np.array(data)
     dimension = len(data.shape)
     assert (
-        dimension >= 2
+        (dimension >= 3) and (dimension <=5) 
     ), "TTHRESH is applied to data of at least 2Dimensions and at most 5 dimensions"
 
-    if dimension == 2:
-        # n*m ---> n*m*1 to use it as a tensor
-        data = data.reshape(data.shape + (1,))
 
     data_file_name = raw_dir + data_name + ".raw"
     data.tofile(data_file_name)

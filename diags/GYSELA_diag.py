@@ -245,7 +245,6 @@ def GetPhi2Dmostunstable(H5conf, H5Phi2D):
     timeEnd = timeg[itimeEnd][0]
 
     Phi2D_thphi = H5Phi2D.Phithphi
-    print(Phi2D_thphi.shape)
 
     # --> For modes m=0 to m_max with n=0
     itimeLook = itimeEnd
