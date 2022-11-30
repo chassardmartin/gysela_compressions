@@ -129,6 +129,11 @@ class FourierDiag:
                 # h5 extraction to dask array 
                 origin_data = h5_to_da(self.origin_dir + origin_file, key_name)
                 rec_data = h5_to_da(self.reconstructions_dir + rec_file, key_name)
+                # To compute fft, data should have chunksize complete on the axis, just
+                # like wavelets ---> to fix ! 
+                origin_data = origin_data.rechunk(chunks=origin_data.shape) 
+                rec_data = rec_data.rechunk(chunks=rec_data.shape) 
+
                 return np.abs(da.fft.fftn(origin_data)), np.abs(da.fft.fftn(rec_data))
 
             files = db.from_sequence(zip(self.origin_files, self.rec_files))
@@ -236,8 +241,8 @@ class GYSELAmostunstableDiag:
             self.rec_tensor = fourier_diag_to_tensor(modes_m0_rec, modes_mn_rec)
 
             if dask_arrays:
-                self.origin_tensor = da.from_array(self.origin_tensor, chunks="auto")
-                self.rec_tensor = da.from_array(self.rec_tensor, chunks="auto")
+                self.origin_tensor = da.from_array(self.origin_tensor)
+                self.rec_tensor = da.from_array(self.rec_tensor)
 
     def add_metric(self, metric, parameter=None, time_series=False):
         """
