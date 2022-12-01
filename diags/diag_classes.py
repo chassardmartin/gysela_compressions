@@ -46,30 +46,26 @@ class IdentityDiag:
             os.mkdir(self.diag_dir)
 
         self.diag_dir += '/' 
-        self.json_path = self.diag_dir + self.__name__ + ".json"
 
+        self.origin_tensor = []
+        self.rec_tensor = []
 
-        if not os.path.isfile(self.json_path):
-            # In that case no diag was executed
-            self.origin_tensor = []
-            self.rec_tensor = []
+        def build(origin_file, rec_file):
+            # h5 extraction to dask array 
+            origin_data = h5_to_da(self.origin_dir + origin_file, key_name)
+            rec_data = h5_to_da(self.reconstructions_dir + rec_file, key_name)
+            return origin_data, rec_data
 
-            def build(origin_file, rec_file):
-                # h5 extraction to dask array 
-                origin_data = h5_to_da(self.origin_dir + origin_file, key_name)
-                rec_data = h5_to_da(self.reconstructions_dir + rec_file, key_name)
-                return origin_data, rec_data
-
-            files = db.from_sequence(zip(self.origin_files, self.rec_files))
-            tensors = files.map(lambda x: build(x[0], x[1])).compute()
-            # creates list of dask arrays 
-            for origin_data, rec_data in tensors:
-                self.origin_tensor.append(origin_data)
-                self.rec_tensor.append(rec_data)
-            
-            # creates a new big dask array with time as the first dimension 
-            self.origin_tensor = da.from_array(self.origin_tensor) 
-            self.rec_tensor = da.from_array(self.rec_tensor) 
+        files = db.from_sequence(zip(self.origin_files, self.rec_files))
+        tensors = files.map(lambda x: build(x[0], x[1])).compute()
+        # creates list of dask arrays 
+        for origin_data, rec_data in tensors:
+            self.origin_tensor.append(origin_data)
+            self.rec_tensor.append(rec_data)
+        
+        # creates a new big dask array with time as the first dimension 
+        self.origin_tensor = da.from_array(self.origin_tensor) 
+        self.rec_tensor = da.from_array(self.rec_tensor) 
             
     def add_metric(self, metric, parameter=None, time_series=True):
         """
@@ -90,6 +86,7 @@ class IdentityDiag:
         Saves the computed metric errors in a json file in the 
             self.diag_dir directory
         """
+        self.json_path = self.diag_dir + self.__name__ + ".json"
         df = pd.DataFrame(self.qualities)
         df.to_json(self.json_path)
 
@@ -128,36 +125,32 @@ class FourierDiag:
             os.mkdir(self.diag_dir)
 
         self.diag_dir += '/' 
-        self.json_path = self.diag_dir + self.__name__ + ".json"
 
-        if not os.path.isfile(self.json_path):
-            # In that case no diag was executed
+        self.origin_tensor = []
+        self.rec_tensor = []
 
-            self.origin_tensor = []
-            self.rec_tensor = []
+        def build(origin_file, rec_file):
+            # h5 extraction to dask array 
+            origin_data = h5_to_da(self.origin_dir + origin_file, key_name)
+            rec_data = h5_to_da(self.reconstructions_dir + rec_file, key_name)
+            # To compute fft, data should have chunksize complete on the axis, just
+            # like wavelets, hence this rechunking 
+            origin_data = origin_data.rechunk(chunks=origin_data.shape) 
+            rec_data = rec_data.rechunk(chunks=rec_data.shape) 
 
-            def build(origin_file, rec_file):
-                # h5 extraction to dask array 
-                origin_data = h5_to_da(self.origin_dir + origin_file, key_name)
-                rec_data = h5_to_da(self.reconstructions_dir + rec_file, key_name)
-                # To compute fft, data should have chunksize complete on the axis, just
-                # like wavelets, hence this rechunking 
-                origin_data = origin_data.rechunk(chunks=origin_data.shape) 
-                rec_data = rec_data.rechunk(chunks=rec_data.shape) 
+            return np.abs(da.fft.fftn(origin_data)), np.abs(da.fft.fftn(rec_data))
 
-                return np.abs(da.fft.fftn(origin_data)), np.abs(da.fft.fftn(rec_data))
-
-            files = db.from_sequence(zip(self.origin_files, self.rec_files))
-            tensors = files.map(lambda x: build(x[0], x[1])).compute()
-            
-            # creates lists of dask arrays 
-            for origin_data, rec_data in tensors:
-                self.origin_tensor.append(origin_data)
-                self.rec_tensor.append(rec_data)
-            
-            # creates a new big dask array with time as the first dimension 
-            self.origin_tensor = da.from_array(self.origin_tensor) 
-            self.rec_tensor = da.from_array(self.rec_tensor) 
+        files = db.from_sequence(zip(self.origin_files, self.rec_files))
+        tensors = files.map(lambda x: build(x[0], x[1])).compute()
+        
+        # creates lists of dask arrays 
+        for origin_data, rec_data in tensors:
+            self.origin_tensor.append(origin_data)
+            self.rec_tensor.append(rec_data)
+        
+        # creates a new big dask array with time as the first dimension 
+        self.origin_tensor = da.from_array(self.origin_tensor) 
+        self.rec_tensor = da.from_array(self.rec_tensor) 
 
 
     def add_metric(self, metric, parameter=None, time_series=True):
@@ -179,6 +172,7 @@ class FourierDiag:
         Saves the computed metric errors in a json file in the 
             self.diag_dir directory
         """
+        self.json_path = self.diag_dir + self.__name__ + ".json"
         df = pd.DataFrame(self.qualities)
         df.to_json(self.json_path)
 
@@ -242,33 +236,30 @@ class GYSELAmostunstableDiag:
             os.mkdir(self.diag_dir)
 
         self.diag_dir += '/' 
-        self.json_path = self.diag_dir + self.__name__ + ".json"
 
-        if not os.path.isfile(self.json_path):
-            # In that case no diag was executed
-            self.loadHDF5(init_state_dir)
-            print("HDF5 loaded successfuly")
-            print(self.H5Phi2D.Phithphi.shape) 
-            print(self.H5Phi2D_rec.Phithphi.shape)
+        self.loadHDF5(init_state_dir)
+        print("HDF5 loaded successfuly")
+        print(self.H5Phi2D.Phithphi.shape) 
+        print(self.H5Phi2D_rec.Phithphi.shape)
 
-            modes_m0, modes_mn = GetPhi2Dmostunstable(self.H5conf, self.H5Phi2D)
-            modes_m0_rec, modes_mn_rec = GetPhi2Dmostunstable(
-                self.H5conf, self.H5Phi2D_rec
-            )
+        modes_m0, modes_mn = GetPhi2Dmostunstable(self.H5conf, self.H5Phi2D)
+        modes_m0_rec, modes_mn_rec = GetPhi2Dmostunstable(
+            self.H5conf, self.H5Phi2D_rec
+        )
 
-            # We consider here numpy arrays, no need for dask as this diag is 2D
-            self.origin_tensor = fourier_diag_to_tensor(modes_m0, modes_mn)
-            self.rec_tensor = fourier_diag_to_tensor(modes_m0_rec, modes_mn_rec)
+        # We consider here numpy arrays, no need for dask as this diag is 2D
+        self.origin_tensor = fourier_diag_to_tensor(modes_m0, modes_mn)
+        self.rec_tensor = fourier_diag_to_tensor(modes_m0_rec, modes_mn_rec)
 
-            if dask_arrays:
-                self.origin_tensor = da.from_array(self.origin_tensor)
-                self.rec_tensor = da.from_array(self.rec_tensor)
-            
-            # For the special case of this diag, we transpose to have time as the first dimension 
-            # Which is the case for Identity and Fourier 
+        if dask_arrays:
+            self.origin_tensor = da.from_array(self.origin_tensor)
+            self.rec_tensor = da.from_array(self.rec_tensor)
+        
+        # For the special case of this diag, we transpose to have time as the first dimension 
+        # Which is the case for Identity and Fourier 
 
-            self.origin_tensor = self.origin_tensor.transpose() 
-            self.rec_tensor = self.rec_tensor.transpose() 
+        self.origin_tensor = self.origin_tensor.transpose() 
+        self.rec_tensor = self.rec_tensor.transpose() 
 
     def add_metric(self, metric, parameter=None, time_series=True):
         """
@@ -289,5 +280,6 @@ class GYSELAmostunstableDiag:
         Saves the computed metric errors in a json file in the 
             self.diag_dir directory
         """
+        self.json_path = self.diag_dir + self.__name__ + ".json"
         df = pd.DataFrame(self.qualities)
         df.to_json(self.json_path)
