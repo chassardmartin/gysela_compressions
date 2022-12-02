@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import csv 
 
 # print(os.listdir("/local/home/mc271598/Bureau/code/gysela_compressions/analysis/compression_analysis/"))
 # methods = ['ezw', 'zfp', 'tthresh', 'wave_percent']
@@ -124,3 +125,24 @@ def create_xarray_dims_as_csv(rec_dir, data_dimension):
         np.savetxt(rec_dir + "/" + "methods.csv", methods, fmt="% s")
         np.savetxt(rec_dir + "/" + "data.csv", data, fmt="% s")
         np.savetxt(rec_dir + "/" + "diags.csv", diags, fmt="% s")
+
+
+def csv_dims_to_lists(rec_dir):
+    methods = [] 
+    with open(rec_dir + 'methods.csv') as methods_file:
+        _read = csv.reader(methods_file)
+        for row in _read:
+            methods.append(row[0]) 
+
+    data = []
+    with open(rec_dir + 'data.csv') as data_file:
+        _read = csv.reader(data_file)
+        for row in _read:
+            data.append(row[0]) 
+
+    diags = [] 
+    with open(rec_dir + 'diags.csv') as diags_file:
+        _read = csv.reader(diags_file)
+        for row in _read:
+            diags.append(row[0])
+    return methods, data, diags 
