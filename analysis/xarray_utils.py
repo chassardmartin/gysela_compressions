@@ -1,8 +1,8 @@
-import xarray as xr 
+import xarray as xr
 import pandas as pd
 import glob
-import numpy as np 
-import os 
+import numpy as np
+import os
 from csv_conversions import csv_dims_to_lists
 
 
@@ -19,101 +19,111 @@ def xarray_results_dataset(rec_dir, data_dimension):
         whether in 2D (keys "Phirth" and "Phithphi") or 3D. 
     """
 
-    methods, data, diags = csv_dims_to_lists(rec_dir) 
+    methods, data, diags = csv_dims_to_lists(rec_dir)
 
-    comp_rate = np.zeros((len(methods), len(data))) 
+    comp_rate = np.zeros((len(methods), len(data)))
     comp_time = np.zeros((len(methods), len(data)))
-    decomp_time = np.zeros((len(methods), len(data))) 
+    decomp_time = np.zeros((len(methods), len(data)))
     psnr = np.zeros((len(methods), len(data), len(diags)))
     hsnr = np.zeros((len(methods), len(data), len(diags)))
 
-    N = len(data) 
+    N = len(data)
 
-    half_N = N // 2 
+    half_N = N // 2
 
-    if data_dimension == 2: 
+    if data_dimension == 2:
 
-        phirth_methods = glob.glob(rec_dir + '/Phirth*')
-        phirth_methods.sort() 
-        phithphi_methods = glob.glob(rec_dir + '/Phithphi*')
-        phithphi_methods.sort() 
+        phirth_methods = glob.glob(rec_dir + "/Phirth*")
+        phirth_methods.sort()
+        phithphi_methods = glob.glob(rec_dir + "/Phithphi*")
+        phithphi_methods.sort()
 
-        # Filling the 2D and 3D arrays respecting dimension orders 
-        for i, method_dir in enumerate(phirth_methods): 
-            df = pd.read_json(method_dir + '/comp_results.json')
-            # N//2 to split between Phirth and Phithphi keys 
+        # Filling the 2D and 3D arrays respecting dimension orders
+        for i, method_dir in enumerate(phirth_methods):
+            df = pd.read_json(method_dir + "/comp_results.json")
+            # N//2 to split between Phirth and Phithphi keys
             comp_rate[i, :half_N] = df.compression_rate
-            comp_time[i, :half_N] = df.compression_time 
-            decomp_time[i, :half_N] = df.decompression_time 
+            comp_time[i, :half_N] = df.compression_time
+            decomp_time[i, :half_N] = df.decompression_time
 
-            diag_dir = os.path.join(method_dir, 'diags')
-            diag_files = glob.glob(diag_dir + '/*.json') 
-            diag_files.sort() 
+            diag_dir = os.path.join(method_dir, "diags")
+            diag_files = glob.glob(diag_dir + "/*.json")
+            diag_files.sort()
 
             for j, diag_file in enumerate(diag_files):
-                df = pd.read_json(diag_file) 
+                df = pd.read_json(diag_file)
                 # j+1 to ignore GYSELA diag
-                psnr[i, :half_N, j+1] = df.psnr 
-                hsnr[i, :half_N, j+1] = df["hsnr_0.1"]
+                psnr[i, :half_N, j + 1] = df.psnr
+                hsnr[i, :half_N, j + 1] = df["hsnr_0.1"]
 
-        for i, method_dir in enumerate(phithphi_methods): 
-            df = pd.read_json(method_dir + '/comp_results.json')
+        for i, method_dir in enumerate(phithphi_methods):
+            df = pd.read_json(method_dir + "/comp_results.json")
             comp_rate[i, half_N:] = df.compression_rate
-            comp_time[i, half_N:] = df.compression_time 
-            decomp_time[i, half_N:] = df.decompression_time 
+            comp_time[i, half_N:] = df.compression_time
+            decomp_time[i, half_N:] = df.decompression_time
 
-            diag_dir = os.path.join(method_dir, 'diags')
-            diag_files = glob.glob(diag_dir + '/*.json') 
-            diag_files.sort() 
+            diag_dir = os.path.join(method_dir, "diags")
+            diag_files = glob.glob(diag_dir + "/*.json")
+            diag_files.sort()
 
             for j, diag_file in enumerate(diag_files):
-                df = pd.read_json(diag_file) 
-                # j to keep GYSELA diag 
-                psnr[i, half_N:, j] = df.psnr 
+                df = pd.read_json(diag_file)
+                # j to keep GYSELA diag
+                psnr[i, half_N:, j] = df.psnr
                 hsnr[i, half_N:, j] = df["hsnr_0.1"]
-    
+
     elif data_dimension == 3:
 
-        phi_3D_methods = glob.glob(rec_dir + '/Phi_3D*')
-        phi_3D_methods.sort() 
+        phi_3D_methods = glob.glob(rec_dir + "/Phi_3D*")
+        phi_3D_methods.sort()
 
-        # Filling the 2D and 3D arrays respecting dimension orders 
-        for i, method_dir in enumerate(phi_3D_methods): 
-            df = pd.read_json(method_dir + '/comp_results.json')
-            # No splitting necessary in 3D 
+        # Filling the 2D and 3D arrays respecting dimension orders
+        for i, method_dir in enumerate(phi_3D_methods):
+            df = pd.read_json(method_dir + "/comp_results.json")
+            # No splitting necessary in 3D
             comp_rate[i, :] = df.compression_rate
-            comp_time[i, :] = df.compression_time 
-            decomp_time[i, :] = df.decompression_time 
+            comp_time[i, :] = df.compression_time
+            decomp_time[i, :] = df.decompression_time
 
-            diag_dir = os.path.join(method_dir, 'diags')
-            diag_files = glob.glob(diag_dir + '/*.json') 
-            diag_files.sort() 
+            diag_dir = os.path.join(method_dir, "diags")
+            diag_files = glob.glob(diag_dir + "/*.json")
+            diag_files.sort()
 
             for j, diag_file in enumerate(diag_files):
-                df = pd.read_json(diag_file) 
+                df = pd.read_json(diag_file)
 
-                psnr[i, :, j] = df.psnr 
+                psnr[i, :, j] = df.psnr
                 hsnr[i, :, j] = df["hsnr_0.1"]
 
     else:
-        raise Exception("Only 2 and 3D implemented") 
+        raise Exception("Only 2 and 3D implemented")
 
-    comp_rate_xr = xr.DataArray(comp_rate, coords=[methods, data], dims=["method", "data"])
-    comp_time_xr = xr.DataArray(comp_time, coords=[methods, data], dims=["method", "data"])
-    decomp_time_xr = xr.DataArray(decomp_time, coords=[methods, data], dims=["method", "data"])
-    psnr_xr = xr.DataArray(psnr, coords=[methods, data, diags], dims=["method", "data", "diag"])
-    hsnr_xr = xr.DataArray(hsnr, coords=[methods, data, diags], dims=["method", "data", "diag"])
+    comp_rate_xr = xr.DataArray(
+        comp_rate, coords=[methods, data], dims=["method", "data"]
+    )
+    comp_time_xr = xr.DataArray(
+        comp_time, coords=[methods, data], dims=["method", "data"]
+    )
+    decomp_time_xr = xr.DataArray(
+        decomp_time, coords=[methods, data], dims=["method", "data"]
+    )
+    psnr_xr = xr.DataArray(
+        psnr, coords=[methods, data, diags], dims=["method", "data", "diag"]
+    )
+    hsnr_xr = xr.DataArray(
+        hsnr, coords=[methods, data, diags], dims=["method", "data", "diag"]
+    )
 
     ds = xr.Dataset(
         {
-            "comp_rate" : comp_rate_xr,
-            "comp_time" : comp_time_xr,
+            "comp_rate": comp_rate_xr,
+            "comp_time": comp_time_xr,
             "decomp_time": decomp_time_xr,
-            "psnr" : psnr_xr,
-            "hsnr_0.1" : hsnr_xr
+            "psnr": psnr_xr,
+            "hsnr_0.1": hsnr_xr,
         }
     )
-    return ds 
+    return ds
 
 
 def rth_slice_dataset(dataset):
@@ -123,57 +133,54 @@ def rth_slice_dataset(dataset):
     """
 
     # Full size of the data dimension
-    # first half of the data are the wanted key to slice 
-    N = dataset.dims['data'] 
+    # first half of the data are the wanted key to slice
+    N = dataset.dims["data"]
 
-    half_N = N // 2 
+    half_N = N // 2
 
-    rth_comp_rate = dataset.comp_rate[:, :half_N] 
+    rth_comp_rate = dataset.comp_rate[:, :half_N]
     rth_comp_time = dataset.comp_time[:, :half_N]
-    rth_decomp_time = dataset.decomp_time[:, :half_N]  
-    rth_psnr = dataset.psnr[:, :half_N, :] 
-    rth_hsnr = dataset["hsnr_0.1"][:, :half_N, :] 
+    rth_decomp_time = dataset.decomp_time[:, :half_N]
+    rth_psnr = dataset.psnr[:, :half_N, :]
+    rth_hsnr = dataset["hsnr_0.1"][:, :half_N, :]
 
     rth_ds = xr.Dataset(
         {
-            "comp_rate" : rth_comp_rate,
-            "comp_time" : rth_comp_time,
-            "decomp_time" : rth_decomp_time,
-            "psnr" : rth_psnr,
-            "hsnr_0.1" : rth_hsnr
+            "comp_rate": rth_comp_rate,
+            "comp_time": rth_comp_time,
+            "decomp_time": rth_decomp_time,
+            "psnr": rth_psnr,
+            "hsnr_0.1": rth_hsnr,
         }
     )
-    return rth_ds 
+    return rth_ds
 
 
-def thphi_slice_dataset(dataset): 
+def thphi_slice_dataset(dataset):
     """
     computes a thphi (key "Phithphi") slice for phi 2D results 
     - dataset : xarray.Dataset object as generated by xarray_results_dataset
     """
 
     # Full size of the data dimension
-    # second half of the data are the wanted key to slice 
-    N = dataset.dims['data'] 
+    # second half of the data are the wanted key to slice
+    N = dataset.dims["data"]
 
-    half_N = N // 2 
+    half_N = N // 2
 
-    thphi_comp_rate = dataset.comp_rate[:, half_N:] 
+    thphi_comp_rate = dataset.comp_rate[:, half_N:]
     thphi_comp_time = dataset.comp_time[:, half_N:]
-    thphi_decomp_time = dataset.decomp_time[:, half_N:]  
-    thphi_psnr = dataset.psnr[:, half_N:, :] 
-    thphi_hsnr = dataset["hsnr_0.1"][:, half_N:, :] 
+    thphi_decomp_time = dataset.decomp_time[:, half_N:]
+    thphi_psnr = dataset.psnr[:, half_N:, :]
+    thphi_hsnr = dataset["hsnr_0.1"][:, half_N:, :]
 
     thphi_ds = xr.Dataset(
         {
-            "comp_rate" : thphi_comp_rate,
-            "comp_time" : thphi_comp_time,
-            "decomp_time" : thphi_decomp_time,
-            "psnr" : thphi_psnr,
-            "hsnr_0.1" : thphi_hsnr
+            "comp_rate": thphi_comp_rate,
+            "comp_time": thphi_comp_time,
+            "decomp_time": thphi_decomp_time,
+            "psnr": thphi_psnr,
+            "hsnr_0.1": thphi_hsnr,
         }
     )
-    return thphi_ds 
-    
-
-
+    return thphi_ds

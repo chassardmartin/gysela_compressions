@@ -1,6 +1,6 @@
 import numpy as np
 import os
-import csv 
+import csv
 
 
 def create_xarray_dims_as_csv(rec_dir, data_dimension):
@@ -123,21 +123,21 @@ def csv_dims_to_lists(rec_dir):
     - rec_dir : reconstructions directory where dimensions
                 are stored as .csv files. 
     """
-    methods = [] 
-    with open(rec_dir + 'methods.csv') as methods_file:
+    methods = []
+    with open(rec_dir + "methods.csv") as methods_file:
         _read = csv.reader(methods_file)
         for row in _read:
-            methods.append(row[0]) 
+            methods.append(row[0])
 
     data = []
-    with open(rec_dir + 'data.csv') as data_file:
+    with open(rec_dir + "data.csv") as data_file:
         _read = csv.reader(data_file)
         for row in _read:
-            data.append(row[0]) 
+            data.append(row[0])
 
-    diags = [] 
-    with open(rec_dir + 'diags.csv') as diags_file:
+    diags = []
+    with open(rec_dir + "diags.csv") as diags_file:
         _read = csv.reader(diags_file)
         for row in _read:
             diags.append(row[0])
-    return methods, data, diags 
+    return methods, data, diags

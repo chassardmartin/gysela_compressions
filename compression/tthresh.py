@@ -58,10 +58,9 @@ def tthresh_call_compression(data, raw_dir, data_name, target="psnr", target_val
     if type(data) is not np.ndarray:
         data = np.array(data)
     dimension = len(data.shape)
-    assert (
-        (dimension >= 3) and (dimension <=5) 
+    assert (dimension >= 3) and (
+        dimension <= 5
     ), "TTHRESH is applied to data of at least 2Dimensions and at most 5 dimensions"
-
 
     data_file_name = raw_dir + data_name + ".raw"
     data.tofile(data_file_name)

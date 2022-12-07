@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 
 
-
 def str_sum(str_list):
     """
     Input : ['a','b','c'] 

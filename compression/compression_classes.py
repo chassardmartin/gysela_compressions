@@ -29,13 +29,15 @@ class wavelet_percent_deflateCompressor:
         """
         self.files = os.listdir(origin_dir)
         self.files.sort()
-        # Dask bags ?
+        # Dask bags
         self.files = db.from_sequence(self.files)
         self.origin_dir = origin_dir
         self.target_dir = target_dir
         self.wavelet = wavelet
         self.rate = rate
-        self.parameter = "_" + self.wavelet.name + "_" + str(self.rate * 100) + "%"
+        self.parameter = (
+            "_" + self.wavelet.name + "_" + "{:02d}".format(int(self.rate * 100)) + "%"
+        )
         self.__name__ = "wave_percent_deflate" + self.parameter
 
     def compute(self, key_name):
@@ -53,8 +55,6 @@ class wavelet_percent_deflateCompressor:
             self.reconstruction_path += "/"
 
             def compression(_file):
-                # In case it was already compressed
-                # if not os.path.exists(self.reconstruction_path + _file):
                 data = h5_to_array(self.origin_dir + _file, key_name)
                 t_flag = time()
                 comp, array, slices = wavelet_nDcompression(
@@ -72,8 +72,6 @@ class wavelet_percent_deflateCompressor:
 
             comp_results = self.files.map(lambda _f: compression(_f)).compute()
             json_path = self.reconstruction_path + "comp_results.json"
-
-            # if not os.path.exists(json_path):
 
             self.compression_time = []
             self.compression_rate = []
@@ -109,12 +107,12 @@ class zfpCompressor:
         """
         self.files = os.listdir(origin_dir)
         self.files.sort()
-        # Dask bags ?
+        # Dask bags
         self.files = db.from_sequence(self.files)
         self.origin_dir = origin_dir
         self.target_dir = target_dir
         self.bpd = bpd
-        self.parameter = "_bpd_" + str(bpd)
+        self.parameter = "_bpd_" + "{:02d}".format(bpd)
         self.__name__ = "zfp" + self.parameter
 
     def compute(self, key_name):
@@ -132,8 +130,6 @@ class zfpCompressor:
             self.reconstruction_path += "/"
 
             def compression(_file):
-                # In case it was already compressed
-                # if not os.path.exists(self.reconstruction_path + _file):
                 data = h5_to_array(self.origin_dir + _file, key_name)
                 t_flag = time()
                 comp = zfp_compression(data, self.bpd)
@@ -146,8 +142,6 @@ class zfpCompressor:
 
             comp_results = self.files.map(lambda _f: compression(_f)).compute()
             json_path = self.reconstruction_path + "comp_results.json"
-
-            # if not os.path.exists(json_path):
 
             self.compression_time = []
             self.compression_rate = 64 / self.bpd
@@ -188,7 +182,9 @@ class ezwCompressor:
         self.target_dir = target_dir
         self.wavelet = wavelet
         self.n_passes = n_passes
-        self.parameter = "_n-passes_" + str(n_passes) + "_" + self.wavelet.name
+        self.parameter = (
+            "_n-passes_" + "{:02d}".format(n_passes) + "_" + self.wavelet.name
+        )
         self.__name__ = "ezw" + self.parameter
 
     def compute(self, key_name):
@@ -206,15 +202,12 @@ class ezwCompressor:
             self.reconstruction_path += "/"
 
             def compression(_file):
-                # if not os.path.exists(self.reconstruction_path + _file):
-                print(_file)
                 data = h5_to_array(self.origin_dir + _file, key_name)
                 data_size = byte_size(data)
                 ezw_renorm = 1 / np.min(np.abs(data[np.nonzero(data)]))
                 t_flag = time()
                 encoder = ZeroTreeEncoder(ezw_renorm * data, self.wavelet)
                 encoder.process_coding_passes(self.n_passes)
-                print(time() - t_flag)
                 comp_time = time() - t_flag
                 comp_rate = data_size / len(encoder)
                 t_flag = time()
@@ -227,8 +220,6 @@ class ezwCompressor:
 
             comp_results = self.files.map(lambda _f: compression(_f)).compute()
             json_path = self.reconstruction_path + "comp_results.json"
-
-            # if not os.path.exists(json_path):
 
             self.compression_time = []
             self.compression_rate = []
@@ -265,12 +256,13 @@ class tthreshCompressor:
         """
         self.files = os.listdir(origin_dir)
         self.files.sort()
+        # Dask bags
         self.files = db.from_sequence(self.files)
         self.origin_dir = origin_dir
         self.target_dir = target_dir
         self.target = target
         self.target_value = target_value
-        self.parameter = "_" + target + "_" + str(target_value)
+        self.parameter = "_" + target + "_" + "{:03d}".format(target_value)
         self.__name__ = "tthresh" + self.parameter
 
     def compute(self, key_name):
@@ -288,7 +280,6 @@ class tthreshCompressor:
             self.reconstruction_path += "/"
 
             def compression(_file):
-                # if not os.path.exists(self.reconstruction_path + _file):
                 data = h5_to_array(self.origin_dir + _file, key_name)
                 data_name = _file[:-3] + "_" + key_name
 
@@ -319,19 +310,16 @@ class tthreshCompressor:
                     array_to_h5(
                         reconstruction, self.reconstruction_path + _file, key_name
                     )
-                    return comp_time, _comp_rate, decomp_time, _file
+                    return comp_time, _comp_rate, decomp_time
 
             comp_results = self.files.map(lambda _f: compression(_f)).compute()
             json_path = self.reconstruction_path + "comp_results.json"
-
-            # if not os.path.exists(json_path):
 
             self.compression_time = []
             self.compression_rate = []
             self.decompression_time = []
 
-            for comp_time, comp_rate, decomp_time, _file in comp_results:
-                print(_file) 
+            for comp_time, comp_rate, decomp_time in comp_results:
                 self.compression_time.append(comp_time)
                 self.compression_rate.append(comp_rate)
                 self.decompression_time.append(decomp_time)

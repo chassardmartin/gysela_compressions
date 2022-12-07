@@ -72,7 +72,7 @@ class hsnrMetric:
             res = hsnr(self.parameter, x, y)
             if type(res) is da.core.Array:
                 res = res.compute()
-            # we return a one-element list to have type coherence 
+            # we return a one-element list to have type coherence
             return [res]
         else:
             res = []
