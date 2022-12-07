@@ -2,17 +2,6 @@ import numpy as np
 import os
 import csv 
 
-# print(os.listdir("/local/home/mc271598/Bureau/code/gysela_compressions/analysis/compression_analysis/"))
-# methods = ['ezw', 'zfp', 'tthresh', 'wave_percent']
-# np.savetxt("methods.csv", methods, fmt='% s')
-# test = ['Phirth_m1', 'Phirth_m2', 'Phithphi_m1', 'Phithphi_m2', 'Phi_3D_m1', 'Phi_3D_m2']
-# find_keys = re.compile(r"Phi(rth|thphi|_3D)")
-# find_methods = re.compile(r'(?<=Phirth_)(.*)')
-# keys = [re.search(find_keys, s).group() for s in test]
-# methods = [re.search(find_methods, s).group() for s in test]
-
-# print(keys, methods)
-
 
 def create_xarray_dims_as_csv(rec_dir, data_dimension):
     """
@@ -128,6 +117,12 @@ def create_xarray_dims_as_csv(rec_dir, data_dimension):
 
 
 def csv_dims_to_lists(rec_dir):
+    """
+    a simple function to extract xarray dimensions as 
+    lists 
+    - rec_dir : reconstructions directory where dimensions
+                are stored as .csv files. 
+    """
     methods = [] 
     with open(rec_dir + 'methods.csv') as methods_file:
         _read = csv.reader(methods_file)

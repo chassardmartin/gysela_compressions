@@ -3,7 +3,6 @@ import math
 import numpy as np
 import pandas as pd
 
-# from compression.compression_classes imp
 
 
 def str_sum(str_list):
