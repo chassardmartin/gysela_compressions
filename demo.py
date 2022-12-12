@@ -54,6 +54,8 @@ if __name__ == "__main__":
     ezw_compressor.compute(key) 
 
     ### tthresh Compressor, data dimension ! at least 3D ! 
+    ### using tthresh implies that one has installed it from the authors 
+    ### github repository and added tthresh executable to the PATH variable. 
     # we target for instance psnr = 40
     tthresh_compressor = tthreshCompressor(origin_dir, rec_dir, target="psnr", target_value=40)
     tthresh_compressor.compute(key_3D)
