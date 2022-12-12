@@ -1,0 +1,9 @@
+PyWavelets 
+numpy
+dask
+pandas 
+scipy 
+bitarray
+h5py
+pyzfp
+matplotlib
